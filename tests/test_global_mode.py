@@ -42,3 +42,11 @@ def test_base_threat_ignores_enemy_team():
 def test_base_threat_overrides_attack_push():
     # 红深入压蓝(进攻条件满足)且红基地低血 -> 防守必须压倒进攻
     assert gm.derive_global_mode(_ws([0.8, 0.7, 0.6], [0.7, 0.65, 0.6], [1, 1, 1], [0.1, 0.1, 0.1], 0.4)) == '防守'
+
+def test_derive_sentry_state_maps_mode():
+    import tree.global_mode as gm
+    red = {'robots': {'r': {'type': '步兵3', 'team': '红', 'norm_xy': [0.6, 0.5],
+                            'hp_ratio': 1.0, 'vuln': 0, 'dfire': 0}},
+           'buildings': {'b': {'team': '红', 'hp_ratio': 0.4}}}
+    assert gm.derive_sentry_state(red) == 'def'
+    assert gm.derive_sentry_state({'robots': {}, 'buildings': {}}) == 'cruise'

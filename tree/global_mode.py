@@ -45,3 +45,12 @@ def derive_unit_intent(unit, worldstate, global_mode):
     # 风险
     risk = '高' if (hp < 0.3 or vuln) else ('中' if hp < 0.6 else '低')
     return {'target': target, 'move': move, 'fire': fire, 'risk': risk}
+
+_MODE_TO_SENTRY = {'防守': 'def', '均衡': 'cruise', '进攻': 'cruise'}
+
+def derive_sentry_state(worldstate):
+    """从世界状态派生一个**诚实**的哨兵三态(规则基线): map 全局模式, 不接触标注器真值。
+
+    供 M1 --rule-baseline 作为不泄漏真值的下限; 也让 LLM-raw 得分有参照系。
+    """
+    return _MODE_TO_SENTRY.get(derive_global_mode(worldstate), 'cruise')

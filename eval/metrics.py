@@ -36,3 +36,18 @@ def f1_macro(y_true, y_pred):
         f = 2 * p * r / (p + r) if (p + r) else 0.0
         scores.append(f)
     return sum(scores) / len(scores)
+
+def per_class(y_true, y_pred, labels=None):
+    # 无 scikit-learn 依赖: 逐类 precision/recall/f1 宏口径, 并带支持数(support)
+    if labels is None:
+        labels = [l for l in VALID_STATES if l in set(y_true) or l in set(y_pred)]
+    out = {}
+    for l in labels:
+        tp = sum(1 for a, b in zip(y_true, y_pred) if a == l and b == l)
+        fp = sum(1 for a, b in zip(y_true, y_pred) if a != l and b == l)
+        fn = sum(1 for a, b in zip(y_true, y_pred) if a == l and b != l)
+        p = tp / (tp + fp) if (tp + fp) else 0.0
+        r = tp / (tp + fn) if (tp + fn) else 0.0
+        f = 2 * p * r / (p + r) if (p + r) else 0.0
+        out[l] = {'precision': p, 'recall': r, 'f1': f, 'support': tp + fn}
+    return out
