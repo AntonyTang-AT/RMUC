@@ -199,6 +199,10 @@ def main():
 
     report = {'dataset_games': dataset_ids[:10], 'eval_games': eval_ids[:4],
               'train_stats': stats}
+    # eval 阶段单独跑时自动探测已训练适配器 (out_m2/finetuned/adapter)
+    candidate = os.path.join(args.out, 'finetuned', 'adapter')
+    if adapter is None and args.stage == 'eval' and os.path.isdir(candidate):
+        adapter = candidate
     if args.stage in ('eval', 'all') and adapter:
         reports = stage_eval(adapter, eval_ids, args.out, args.limit)
         report['eval'] = reports

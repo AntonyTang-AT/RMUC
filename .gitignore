@@ -10,3 +10,9 @@ out_m3/
 # LLM API key (never commit)
 .env
 .env.*
+
+# M2 产物与本地模型(下载到项目, 不提交)
+models_hf/
+out_m2/
+rl/out/
+_work/

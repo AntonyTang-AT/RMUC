@@ -4,8 +4,15 @@ torch/transformers/peft/datasets 全部在 train_lora 内惰性 import; 模块�
 """
 import os, time, json
 
-LORA_BASE = 'Qwen/Qwen2.5-3B-Instruct'
-FALLBACK_BASE = 'Qwen/Qwen2.5-1.5B-Instruct'
+
+def _resolve(name):
+    """优先解析到项目本地 models_hf/<name>(local_dir 下载, 不在 HF 默认缓存), 否则回退 HF 名。"""
+    local = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'models_hf', name)
+    return local if os.path.isdir(local) else f'Qwen/{name}'
+
+
+LORA_BASE = _resolve('Qwen2.5-3B-Instruct')
+FALLBACK_BASE = _resolve('Qwen2.5-1.5B-Instruct')
 SYSTEM = ("你是一台比赛策略决策哨兵。根据双方当前世界状态, 输出一组分层宏观决策"
           "(global_mode + 六类单位的 target/move/fire/risk)。")
 
@@ -16,21 +23,14 @@ def _format(rec):
             f"<|im_start|>assistant\n{rec['completion']}<|im_end|>")
 
 
-def train_lora(records, out_dir='out_m2/finetuned', base=LORA_BASE, max_len=512,
-               epochs=1, batch_size=1, grad_accum=8, lr=2e-4, device='cuda'):
-    """instruction/completion -> QLoRA 微调; 返回 (adapter_path, stats)。OOM -> 1.5B 兜底。"""
+def _train_once(records, out_dir, base, max_len, epochs, batch_size, grad_accum, lr, device):
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments, Trainer
     from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
     from datasets import Dataset
     import torch
 
     os.makedirs(out_dir, exist_ok=True)
-    try:
-        tok = AutoTokenizer.from_pretrained(base)
-    except Exception as e:
-        print('base load failed -> fallback 1.5B:', e)
-        base = FALLBACK_BASE
-        tok = AutoTokenizer.from_pretrained(base)
+    tok = AutoTokenizer.from_pretrained(base)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
 
@@ -50,6 +50,7 @@ def train_lora(records, out_dir='out_m2/finetuned', base=LORA_BASE, max_len=512,
                       target_modules=['q_proj', 'k_proj', 'v_proj', 'o_proj',
                                       'gate_proj', 'up_proj', 'down_proj'])
     model = get_peft_model(model, lora)
+    model.print_trainable_parameters()
 
     args = TrainingArguments(
         output_dir=os.path.join(out_dir, 'ckpt'), per_device_train_batch_size=batch_size,
@@ -66,3 +67,21 @@ def train_lora(records, out_dir='out_m2/finetuned', base=LORA_BASE, max_len=512,
         json.dump({'base': base, 'epochs': epochs, 'seconds': int(time.time() - t0),
                    'n_records': len(records), 'tokenizer': str(tok.name_or_path)}, f, ensure_ascii=False, indent=2)
     return adapter_path, {'base': base, 'epochs': epochs, 'seconds': int(time.time() - t0)}
+
+
+def train_lora(records, out_dir='out_m2/finetuned', base=LORA_BASE, max_len=512,
+               epochs=1, batch_size=1, grad_accum=8, lr=2e-4, device='cuda'):
+    """instruction/completion -> QLoRA 微调; 返回 (adapter_path, stats)。
+    加载失败或训练期 CUDA OOM -> 自动回退 1.5B(FALLBACK_BASE)。"""
+    import torch
+    try:
+        return _train_once(records, out_dir, base, max_len, epochs, batch_size, grad_accum, lr, device)
+    except Exception as e:
+        low = str(e).lower()
+        if 'out of memory' in low or 'cuda' in low or 'cuda out of memory' in low:
+            print('训练 OOM -> fallback 1.5B:', e)
+            return _train_once(records, out_dir, FALLBACK_BASE, max_len, epochs, batch_size, grad_accum, lr, device)
+        if 'model' in low or 'load' in low or 'from_pretrained' in low:
+            print('加载失败 -> fallback 1.5B:', e)
+            return _train_once(records, out_dir, FALLBACK_BASE, max_len, epochs, batch_size, grad_accum, lr, device)
+        raise
