@@ -14,7 +14,7 @@ def derive_global_mode(worldstate):
     red_hp = sum(r['hp_ratio'] for r in reds) / len(reds) if reds else 0.0
     blue_hp = sum(r['hp_ratio'] for r in blues) / len(blues) if blues else 0.0
     # 基地血量低 -> 防守倾向
-    base_threat = any(b.get('hp_ratio', 1.0) < 0.5 for b in worldstate['buildings'].values())
+    base_threat = any(b.get('hp_ratio', 1.0) < 0.5 for b in worldstate['buildings'].values() if b.get('team') == '红')
     push_adv = red_push - blue_push
     if push_adv >= 2 and blue_hp < 0.9:
         return '进攻'

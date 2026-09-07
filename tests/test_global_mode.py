@@ -31,3 +31,10 @@ def test_unit_intent_channels_valid():
     assert it['move'] in sl.MOVES
     assert it['risk'] in sl.RISKS
     assert isinstance(it['fire'], bool)
+
+def test_base_threat_ignores_enemy_team():
+    # 敌方(蓝)基地低血但局势均衡 -> 红视角不可判防守; 红基地完好
+    ws = _ws([0.6, 0.5, 0.4], [0.4, 0.5, 0.6], [0.7, 0.7, 0.7], [0.7, 0.7, 0.7], 1.0)
+    ws['buildings'] = {99: {'type': '基地', 'team': '红', 'hp_ratio': 1.0},
+                       200: {'type': '基地', 'team': '蓝', 'hp_ratio': 0.2}}
+    assert gm.derive_global_mode(ws) != '防守'
