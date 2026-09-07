@@ -33,7 +33,10 @@ def best_response(matrix, opp_strategy):
     return max(range(len(exp)), key=lambda i: exp[i])
 
 def choose_mode(matrix, opp_estimate, iterations=500):
+    # spec §6.1: 对抗推演对手最优反应。有对手估计时用 best_response 做纯反应,
+    # 无对手模型(opp_estimate=None)时回退到 regret-matching 自学习分布的 argmax。
+    if opp_estimate is not None:
+        return GLOBAL_MODES[best_response(matrix, opp_estimate)]
     strategy = regret_matching(matrix, iterations)
-    # 学到的混合策略给出"我方倾向哪一意图"分布, argmax 即最优先意图
     idx = max(range(len(strategy)), key=lambda i: strategy[i])
     return GLOBAL_MODES[idx]
