@@ -51,3 +51,38 @@ def test_enemy_in_half_ignores_buildings():
     assert sl._enemy_in_half(dp, b, '红', dp['robots'][7]) is False
     dp['robots'][103] = {'type': '步兵3', 'team': '蓝', 'x': 0.0}
     assert sl._enemy_in_half(dp, b, '红', dp['robots'][7]) is True
+
+
+# --------------------------------------------------------------------------
+# label_sentry branch tests (synthetic dp, no DB / no torch)
+# bounds xmin/xmax from ref => midfield = (xmin+xmax)/2 = 12.6335
+# --------------------------------------------------------------------------
+_B = {'xmin': -2.844, 'xmax': 28.111}   # midfield = 12.6335
+
+def _dp(sentry_x, dfire=0.0, ammo17=0.0, blues=()):
+    robots = {7: {'type': '哨兵', 'team': '红', 'x': sentry_x,
+                  'dfire': dfire, 'ammo17': ammo17}}
+    for i, x in enumerate(blues):
+        robots[101 + i] = {'type': '步兵3', 'team': '蓝', 'x': x}
+    return {'t': 0.0, 'team': {'红': {}, '蓝': {}}, 'robots': robots}
+
+def test_label_sentry_hitbuilding_when_push_and_recent_fire():
+    # sentry past midline (x=20.0 > mid) with recent dfire>0 -> hitbuilding
+    dp = _dp(sentry_x=20.0, dfire=5.0)
+    assert sl.label_sentry(dp, _B, team='红', sentry_rid=7) == 'hitbuilding'
+
+def test_label_sentry_def_when_enemy_in_our_half():
+    # sentry not pushing (x=5.0 < mid) but blue infantry at x=3.0 (< mid) -> def
+    dp = _dp(sentry_x=5.0, blues=(3.0,))
+    assert sl.label_sentry(dp, _B, team='红', sentry_rid=7) == 'def'
+
+def test_label_sentry_cruise_when_idle():
+    # sentry not pushing (x=5.0) and no enemy in our half (blue at x=20.0 > mid) -> cruise
+    dp = _dp(sentry_x=5.0, blues=(20.0,))
+    assert sl.label_sentry(dp, _B, team='红', sentry_rid=7) == 'cruise'
+
+def test_label_sentry_hitbuilding_requires_recent_fire_not_ever_fired():
+    # REGRESSION (Finding A): cumulative ammo17 must NOT trigger hitbuilding;
+    # only recent dfire does. ammo17=999 (ever-fired) + pushing should NOT be 'hitbuilding'.
+    dp = _dp(sentry_x=20.0, dfire=0.0, ammo17=999.0)
+    assert sl.label_sentry(dp, _B, team='红', sentry_rid=7) != 'hitbuilding'

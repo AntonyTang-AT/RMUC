@@ -28,7 +28,7 @@ def label_sentry(dp, bounds, team='红', sentry_rid=7):
     s = _sentry(dp, team, sentry_rid)
     if s is None:
         return 'cruise'
-    if _sentry_pushing(dp, bounds, team, s) and (s.get('dfire', 0) or s.get('ammo17', 0) > 0):
+    if _sentry_pushing(dp, bounds, team, s) and s.get('dfire', 0) > 0:
         return 'hitbuilding'
     if _enemy_in_half(dp, bounds, team, s):
         return 'def'

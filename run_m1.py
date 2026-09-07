@@ -42,6 +42,7 @@ def main():
     con.close()
     legal = metrics.legal_rate([{'state': s} for s in y_pred])
     report = {
+        'mode': 'rule_baseline_smoke' if args.no_llm else 'llm_slowloop',
         'games': gids, 'n': len(samples),
         'accuracy': metrics.accuracy(y_true, y_pred),
         'f1_macro': metrics.f1_macro(y_true, y_pred),
@@ -52,6 +53,8 @@ def main():
     with open(os.path.join(args.out, 'report.json'), 'w', encoding='utf-8') as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
     print(json.dumps(report, ensure_ascii=False, indent=2))
+    if args.no_llm:
+        print("[WARN] --no-llm: rule-baseline smoke (feeds true label as proposal; acc≈1.0 is an infra/fast-loop-identity signal, NOT a model-quality claim).")
 
 def _load():
     from model import predict
