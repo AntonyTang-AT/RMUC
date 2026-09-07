@@ -1,0 +1,7 @@
+数据与资料/*.sqlite
+_work/
+__pycache__/
+*.pyc
+out_m0/
+out_m1/
+.superpowers/
