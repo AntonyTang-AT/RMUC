@@ -6,3 +6,7 @@ out_m0/
 out_m1/
 .superpowers/
 out_m3/
+
+# LLM API key (never commit)
+.env
+.env.*
