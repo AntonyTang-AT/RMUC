@@ -80,7 +80,8 @@ def assess(decisions_llm, decisions_rule):
         'llm_sentry_valid': valid / n,
         'compliance_rate': valid / n,
         'agreement': sum(1 for a, b in zip(llm_sentry, rule_sentry) if a == b) / n,
-        'per_class': metrics.per_class(rule_sentry, llm_sentry),
+        'per_class': metrics.per_class(rule_sentry, llm_sentry,
+                                       labels=sorted(set(rule_sentry) | set(llm_sentry))),
         'conflict_rate': sl.conflict_rate(decisions_llm),
     }
 

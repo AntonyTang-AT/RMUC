@@ -39,3 +39,16 @@ def test_assess_reports_agreement_and_sentry_valid():
     assert rep['llm_sentry_valid'] == 1.0
     assert rep['compliance_rate'] == 1.0
     assert rep['agreement'] == 0.0           # 恰各不相同(匀速) -> 0.0
+
+def test_assess_per_class_nonempty():
+    rule = [sl.build_empty_decision(0.0)] * 3
+    llm = [sl.build_empty_decision(0.0)] * 3
+    for d in (rule + llm):
+        d['global_mode'] = '均衡'
+    for i, d in enumerate(llm):
+        d['units']['哨兵']['move'] = '推进' if i % 2 else '游击'
+    for i, d in enumerate(rule):
+        d['units']['哨兵']['move'] = '推进'
+    rep = run_llm_m3.assess(llm, rule)
+    assert rep['per_class'], 'per_class must not be empty'
+    assert set(rep['per_class'].keys()) <= {'推进', '回防', '游击'}
