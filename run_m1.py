@@ -18,6 +18,9 @@ def main():
     gids = args.games or [config.GAME_REF]
     y_true, y_pred, latencies, samples = [], [], [], []
     rules = bh.Rules()
+    model = tok = None
+    if not args.no_llm:
+        model, tok = _load()
     for gid in gids:
         rows = db.timeseries_for(con, gid)
         dps = features.build_decision_points(rows, gid)
@@ -29,7 +32,6 @@ def main():
                 pred = bh.decide_fast({'robots': w['robots'], 'bot_state': state}, rules)
                 p = pred['state']
             else:
-                model, tok = _load()
                 t0 = time.time()
                 res = _llm_decide(model, tok, w)
                 latencies.append(time.time() - t0)
