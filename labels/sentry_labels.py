@@ -10,12 +10,14 @@ def _midfield_x(bounds):
     return (bounds['xmin'] + bounds['xmax']) / 2.0
 
 def _enemy_in_half(dp, bounds, team, sentry):
-    # 敌方是否存在机器人进入"己方半场"(以中线为界)。team 红则己方 x 偏小侧。
+    # 敌方是否存在机器人/单位进入"己方半场"(以中线为界)。排除建筑(坐标恒为0, 空间伪影)。
     mid = _midfield_x(bounds)
     if team == '红':
-        return any(r['team'] != '红' and r['x'] < mid for r in dp['robots'].values())
+        return any(r['team'] != '红' and r['x'] < mid
+                   for r in dp['robots'].values() if r['type'] not in BUILDING_TYPES)
     else:
-        return any(r['team'] != '蓝' and r['x'] > mid for r in dp['robots'].values())
+        return any(r['team'] != '蓝' and r['x'] > mid
+                   for r in dp['robots'].values() if r['type'] not in BUILDING_TYPES)
 
 def _sentry_pushing(dp, bounds, team, sentry):
     # 哨兵越过中线 (进入敌方半场)
