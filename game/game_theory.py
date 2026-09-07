@@ -40,3 +40,14 @@ def choose_mode(matrix, opp_estimate, iterations=500):
     strategy = regret_matching(matrix, iterations)
     idx = max(range(len(strategy)), key=lambda i: strategy[i])
     return GLOBAL_MODES[idx]
+
+def choose_global_mode(worldstate, opp_estimate=None):
+    """M3 慢环全局模式: 有对手模型 -> 博弈 best_response(强对抗推演); 否则**回退局势感知规则**。
+
+    PAYOFF_3 在均匀对手下恒落 row0(进攻), 导致 mode_counts 恒一类、行为先验频率退化。
+    无对手模型时用 derive_global_mode(读世界状态, 会变)作上下文驱动, 修复病态; 对手模型就绪时仍走博弈。
+    """
+    if opp_estimate is not None:
+        return choose_mode(PAYOFF_3, opp_estimate)
+    from tree import global_mode as gm
+    return gm.derive_global_mode(worldstate)

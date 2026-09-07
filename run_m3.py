@@ -10,11 +10,10 @@ from game import game_theory as gt
 from fastloop import behavior as bh
 
 def compute_decision_series(dps, bounds, opp_estimate=None):
-    est = opp_estimate or [1/3, 1/3, 1/3]
     decisions, sigs = [], []
     for dp in dps:
         w = ws.build_worldstate(dp, bounds)
-        mode = gt.choose_mode(gt.PAYOFF_3, est)      # 博弈论慢环: 选全局模式/意图
+        mode = gt.choose_global_mode(w, opp_estimate)   # None -> derive_global_mode(局势感知)
         d = sl.build_empty_decision(w['t'])
         d['global_mode'] = mode
         for rid, unit in w['robots'].items():
