@@ -9,6 +9,14 @@ from tree import behavior_prior as bp
 from game import game_theory as gt
 from fastloop import behavior as bh
 
+def _sentry_decision_after_feasibility(unit, w, mode):
+    """哨兵单位意图经快环可行性校验: 进攻开火不可行 -> 安全回退, 并修正 target 与 move 语义一致。"""
+    it = gm.derive_unit_intent(unit, w, mode)
+    if it['fire'] and not bh.feasible(
+            'hitbuilding', {'robots': {7: unit}, 'bot_state': 'hitbuilding'}, bh.Rules()):
+        it = {'target': '敌方步兵', 'move': '回防', 'fire': False, 'risk': '高'}
+    return it
+
 def compute_decision_series(dps, bounds, opp_estimate=None):
     decisions, sigs = [], []
     for dp in dps:
@@ -19,12 +27,10 @@ def compute_decision_series(dps, bounds, opp_estimate=None):
         for rid, unit in w['robots'].items():
             if unit['team'] != '红' or unit['type'] not in d['units']:
                 continue  # 只做己方(红)单位; 类型唯一, 不跨队冲突
-            it = gm.derive_unit_intent(unit, w, mode)
-            # 快环可行性校验 (spec §6.2): 哨兵血低/易伤 -> 禁进攻开火, 回退安全
-            if unit['type'] == '哨兵' and it['fire'] and not bh.feasible(
-                    'hitbuilding', {'robots': {7: unit}, 'bot_state': 'hitbuilding'}, bh.Rules()):
-                it = {'target': it['target'], 'move': '回防', 'fire': False, 'risk': '高'}
-            d['units'][unit['type']] = it
+            if unit['type'] == '哨兵':
+                d['units'][unit['type']] = _sentry_decision_after_feasibility(unit, w, mode)
+            else:
+                d['units'][unit['type']] = gm.derive_unit_intent(unit, w, mode)
         # build_empty_decision 已预置六类闲置基线, 未出场类保持合法, 无需再补
         decisions.append(d)
         sigs.append(bp.state_sig(w, mode))
@@ -52,7 +58,7 @@ def main():
         rows = db.timeseries_for(con, gid)
         dps = features.build_decision_points(rows, gid)
         b = features.field_bounds(dps)
-        decisions, prior, sigs = compute_decision_series(dps, b)
+        decisions, prior, _sigs = compute_decision_series(dps, b)
         all_decisions += decisions
         all_priors += prior
     con.close()
