@@ -30,8 +30,9 @@ def compute_decision_series(dps, bounds, opp_estimate=None):
         decisions.append(d)
         sigs.append(bp.state_sig(w, mode))
     # RULING 1 (singleton-wrap): bp.mine 期望 trajectories 为一系列序列(每个序列是一串 (sig,decision) 对),
-    # 故包装成单条轨迹 [ [(sig, global_mode), ...] ] —— 一局 = 一条 sig→mode 流, 否则扁平 2 元组会解包报错。
-    prior = bp.mine([[(sig, d['global_mode']) for sig, d in zip(sigs, decisions)]])
+    # 故包装成单条轨迹 [ [(sig, move), ...] ] —— 一局 = 一条 sig→move 流, 否则扁平 2 元组会解包报错。
+    # 挖掘的是哨兵真实下游决策(单位 move), 而非把已在 sig 里的 mode 原样回显(避免 self-referential)。
+    prior = bp.mine([[(sig, d['units']['哨兵']['move']) for sig, d in zip(sigs, decisions)]])
     return decisions, prior, sigs
 
 def compliance_rate(decisions):
@@ -47,13 +48,14 @@ def main():
     os.makedirs(args.out, exist_ok=True)
     con = db.connect()
     gids = args.games or [config.GAME_REF]
-    all_decisions, all_sigs, trail = [], [], []
+    all_decisions, all_priors = [], []
     for gid in gids:
         rows = db.timeseries_for(con, gid)
         dps = features.build_decision_points(rows, gid)
         b = features.field_bounds(dps)
         decisions, prior, sigs = compute_decision_series(dps, b)
-        all_decisions += decisions; all_sigs += sigs
+        all_decisions += decisions
+        all_priors += prior
     con.close()
     mc = {}
     for d in all_decisions:
@@ -63,6 +65,7 @@ def main():
         'compliance_rate': compliance_rate(all_decisions),
         'conflict_rate': sl.conflict_rate(all_decisions),
         'mode_counts': mc,
+        'prior': all_priors,
     }
     with open(os.path.join(args.out, 'report.json'), 'w', encoding='utf-8') as f:
         json.dump(report, f, ensure_ascii=False, indent=2)

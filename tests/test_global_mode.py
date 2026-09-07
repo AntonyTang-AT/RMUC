@@ -38,3 +38,7 @@ def test_base_threat_ignores_enemy_team():
     ws['buildings'] = {99: {'type': '基地', 'team': '红', 'hp_ratio': 1.0},
                        200: {'type': '基地', 'team': '蓝', 'hp_ratio': 0.2}}
     assert gm.derive_global_mode(ws) != '防守'
+
+def test_base_threat_overrides_attack_push():
+    # 红深入压蓝(进攻条件满足)且红基地低血 -> 防守必须压倒进攻
+    assert gm.derive_global_mode(_ws([0.8, 0.7, 0.6], [0.7, 0.65, 0.6], [1, 1, 1], [0.1, 0.1, 0.1], 0.4)) == '防守'

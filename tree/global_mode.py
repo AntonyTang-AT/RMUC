@@ -16,7 +16,7 @@ def derive_global_mode(worldstate):
     # 基地血量低 -> 防守倾向
     base_threat = any(b.get('hp_ratio', 1.0) < 0.5 for b in worldstate['buildings'].values() if b.get('team') == '红')
     push_adv = red_push - blue_push
-    if push_adv >= 2 and blue_hp < 0.9:
+    if push_adv >= 2 and blue_hp < 0.9 and not base_threat:
         return '进攻'
     if push_adv <= -2 or base_threat:
         return '防守'
