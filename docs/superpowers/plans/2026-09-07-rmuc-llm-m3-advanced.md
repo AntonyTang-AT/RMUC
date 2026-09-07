@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - **进阶 schema 无官方标准**（spec §9）：按 spec §1.2 的四通道（目标对象/移动/开火/风险）+ 全局三模式（攻/守/均衡）设计；考核点是"**严格输出结构化数据**"，即 schema 合规，不追求某具体标准。设计时值从 spec §4 的示例值借鉴（`target` 含 `敌方哨兵/英雄/步兵/前哨站/基地/能量机关/飞镖/无`，`risk` 为 `高/中/低`）。
-- **测试边界**：单测只测纯逻辑，**不接数据库、不加载 transformers/torch**；凡涉及 `/` 字段需构造合成 `dp`/`worldstate`（纯 dict）。
+- **测试边界**：单测**不加载 transformers/torch**；凡涉及字段值可构造合成 `dp`/`worldstate`（纯 dict），或用 `data.db` **只读查询** `config.GAME_REF` 的离线路由（M1 先例，不触发 GPU/模型）。
 - **状态枚举一致性**：沿用既有 `('def','hitbuilding','cruise')`（sentry 状态）、`accept_targets`（`worldstate.worldstate`）、`ROBOT_TYPES`（`data.features`）；M3 的新枚举集中在 `schema/layered.py`，其它模块 `from schema.layered import ...`。
 - **生成产物不入库**：`run_m3.py` 输出到 `out_m3/`；在 `.gitignore` **追加** `out_m3/` 一行（additive 追加，不覆盖既有忽略规则 `out_m0/out_m1/.superpowers/` 等）。
 - **M3-first 依赖处理**：M3 原契约消费 `rl/distill_labels`，但 M2 未建。M3 用 `tree/global_mode` 的**规则推导分层决策**作标签源（self-consistent），M2 蒸馏标签后续可替换；接口保持 `worldstate -> layered decision` 同构。
@@ -103,10 +103,10 @@ def test_validate_bad_fire_type():
 def test_conflict_rate():
     a = _valid()
     b = _valid(); b['global_mode'] = '防守'
-    c = _valid()   # same as a -> no conflict vs a
+    c = dict(b)   # same as b -> 仅 a->b 这一对变化
     r = sl.conflict_rate([a, b, c])
     assert 0.0 <= r <= 1.0
-    assert abs(r - 1/2) < 1e-9  # one change between two adjacent pairs
+    assert abs(r - 1/2) < 1e-9  # 两对相邻中恰好一对变化
 ```
 
 - [ ] **Step 2: 运行确认失败**
@@ -125,7 +125,9 @@ MOVES = ('推进', '回防', '游击', '坚守', '绕行', '无')
 RISKS = ('高', '中', '低')
 
 def build_empty_decision(t):
-    return {'t': t, 'global_mode': None, 'units': {c: None for c in UNIT_CLASSES}}
+    # 每类预置保守闲置决策, 保证"每台机器人"六类齐全的合法基线 (合规率 100%); 运行时按需覆盖
+    idle = {'target': '无', 'move': '无', 'fire': False, 'risk': '低'}
+    return {'t': t, 'global_mode': '均衡', 'units': {c: dict(idle) for c in UNIT_CLASSES}}
 
 def _channels(entry):
     if not isinstance(entry, dict):
@@ -586,9 +588,7 @@ def compute_decision_series(dps, bounds, opp_estimate=None):
                     'hitbuilding', {'robots': {7: unit}, 'bot_state': 'hitbuilding'}, bh.Rules()):
                 it = {'target': it['target'], 'move': '回防', 'fire': False, 'risk': '高'}
             d['units'][unit['type']] = it
-        for c in sl.UNIT_CLASSES:                    # 未出场类 -> 保守闲置, 保证六类齐全(合规率 100%)
-            if d['units'].get(c) is None:
-                d['units'][c] = {'target': '无', 'move': '无', 'fire': False, 'risk': '低'}
+        # build_empty_decision 已预置六类闲置基线, 未出场类保持合法, 无需再补
         decisions.append(d)
         sigs.append(bp.state_sig(w, mode))
     prior = bp.mine([(sig, d['global_mode']) for sig, d in zip(sigs, decisions)])
