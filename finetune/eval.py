@@ -22,8 +22,11 @@ def _extract_decisions(text):
     return d if sl.validate(d)[0] else None
 
 
-def eval_model(adapter_path, dps, bounds, base=None, device='cuda', max_new=200, batch=None):
-    """返回 {'n','legal_rate','agreement_with_rule','compliance_rate','conflict_rate'}。"""
+def eval_model(adapter_path, dps, bounds, base=None, device='cuda', max_new=200, batch=None,
+               return_predictions=False):
+    """返回 {'n','legal_rate','agreement_with_rule','compliance_rate','conflict_rate'}。
+    若 return_predictions=True, 追加 'predictions'(合法决策 dict 列表)与 'states'(对齐 worldstate 列表),
+    供上层的 global_mode_align_gap 做逐点胜势对齐(见 Track 1 retrain_eval)。"""
     from transformers import AutoModelForCausalLM, AutoTokenizer
     from peft import PeftModel
     import torch
@@ -40,11 +43,18 @@ def eval_model(adapter_path, dps, bounds, base=None, device='cuda', max_new=200,
     tok = AutoTokenizer.from_pretrained(adapter_path)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
-    model = AutoModelForCausalLM.from_pretrained(base, load_in_4bit=True, device_map=device)
+    # 4bit 需带索引的 device_map({'':current_device}); 否则 index=None -> torch.device(None)
+    if str(device).startswith('cuda'):
+        _idx = int(device.split(':')[1]) if ':' in str(device) else torch.cuda.current_device()
+        device_map = {'': _idx}
+    else:
+        device_map = {'': device}
+    model = AutoModelForCausalLM.from_pretrained(base, load_in_4bit=True, device_map=device_map)
     model = PeftModel.from_pretrained(model, adapter_path)
     model.eval()
 
     decs = []
+    states = []
     sent_moves = []
     rule_sent = []
     for dp in dps:
@@ -58,6 +68,7 @@ def eval_model(adapter_path, dps, bounds, base=None, device='cuda', max_new=200,
         d = _extract_decisions(text)
         if d is not None:
             decs.append(d)
+            states.append(w)
             sent_moves.append(d['units'].get('哨兵', {}).get('move', '无'))
         rule_sent.append(_SENTRY_TO_MOVE.get(gm.derive_sentry_state(w), '游击'))
 
@@ -65,5 +76,9 @@ def eval_model(adapter_path, dps, bounds, base=None, device='cuda', max_new=200,
     legal = sum(1 for d in decs if sl.validate(d)[0]) / max(n, 1)
     agree = sum(1 for a, b in zip(sent_moves, rule_sent) if a == b) / max(len(decs), 1)
     conf = sl.conflict_rate(decs) if len(decs) > 1 else 0.0
-    return {'n': len(decs), 'legal_rate': legal,
-            'agreement_with_rule': agree, 'conflict_rate': conf}
+    res = {'n': len(decs), 'legal_rate': legal,
+           'agreement_with_rule': agree, 'conflict_rate': conf}
+    if return_predictions:
+        res['predictions'] = decs
+        res['states'] = states
+    return res
