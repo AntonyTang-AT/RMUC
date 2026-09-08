@@ -90,16 +90,19 @@ def test_relabel_decisions_rollout_shape_and_legal():
 
 
 def test_step_robots_enemy_fire_flag():
+    """R-E6: enemy_fire=False 关返回敌火(防双算)。红方 action-fire 打蓝方掉血;
+    而蓝方返回敌火被抑制 -> 红方自身零伤。对照组 enemy_fire=True: 红方经返回敌火掉血(证明测试确能区分标志)。"""
     from rl import physics as ph
-    # red sentry at x, blue infantry in range; red fires nothing (fire=False)
-    live = {'r1': {'type': '哨兵', 'team': '红', 'x': 40.0, 'y': 50.0, 'hp': 300.0, 'maxhp': 400.0,
-                   'power': 0.0, 'small_heat': 0.0, 'big_heat': 0.0, 'vuln': 0.0,
-                   'ammo17': 0.0, 'ammo42': 0.0, 'dfire': 0.0, 'yaw': 0.0, 'alive': 1},
-            'b1': {'type': '步兵3', 'team': '蓝', 'x': 46.0, 'y': 50.0, 'hp': 275.0, 'maxhp': 275.0,
-                   'power': 0.0, 'small_heat': 0.0, 'big_heat': 0.0, 'vuln': 0.0,
-                   'ammo17': 0.0, 'ammo42': 0.0, 'dfire': 0.0, 'yaw': 0.0, 'alive': 1}}
-    # red does NOT fire -> with enemy_fire=True the BLUE _enemy_fire would also not matter (blue isn't acting),
-    # but the flag matters for the RED team's return fire in a both-teams rollout: verify a clean call.
-    out = ph.step_robots(live, '红', {'哨兵': {'move': '无', 'fire': False}}, dt=3.0, enemy_fire=False)
-    # red fire=False -> blue must take no damage
-    assert out['b1']['hp'] == 275.0
+    def mk():
+        return {'r1': {'type': '哨兵', 'team': '红', 'x': 40.0, 'y': 50.0, 'hp': 300.0, 'maxhp': 400.0,
+                       'power': 0.0, 'small_heat': 0.0, 'big_heat': 0.0, 'vuln': 0.0,
+                       'ammo17': 0.0, 'ammo42': 0.0, 'dfire': 0.0, 'yaw': 0.0, 'alive': 1},
+                'b1': {'type': '步兵3', 'team': '蓝', 'x': 46.0, 'y': 50.0, 'hp': 275.0, 'maxhp': 275.0,
+                       'power': 0.0, 'small_heat': 0.0, 'big_heat': 0.0, 'vuln': 0.0,
+                       'ammo17': 0.0, 'ammo42': 0.0, 'dfire': 0.0, 'yaw': 0.0, 'alive': 1}}
+    act = {'哨兵': {'move': '无', 'fire': True}}
+    off = ph.step_robots(mk(), '红', act, dt=3.0, enemy_fire=False)
+    assert off['b1']['hp'] < 275.0   # 红方 action-fire 命中蓝方(合法) -> 蓝方掉血
+    assert off['r1']['hp'] == 300.0  # 无返回敌火 -> 红方自身零伤
+    on = ph.step_robots(mk(), '红', act, dt=3.0, enemy_fire=True)
+    assert on['r1']['hp'] < 300.0    # 对照组: 蓝方返回敌火 -> 红方掉血, 证明标志可区分
