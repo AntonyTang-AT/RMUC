@@ -23,19 +23,15 @@ def _dp():
 BOUNDS = {'xmin': 0.0, 'xmax': 100.0, 'ymin': 0.0, 'ymax': 100.0}
 
 
-def test_enemy_best_response_is_transpose_argmax():
-    from game import game_theory as gt
-    import numpy as np
-    for m in sl.GLOBAL_MODES:
-        got = rl.enemy_best_response(m)
-        assert got in sl.GLOBAL_MODES
-        # 手算: 敌方行(mode) 对 我方列(one-hot m) 的 argmax
-        i = sl.GLOBAL_MODES.index(m)
-        onehot = [1.0 if k == i else 0.0 for k in range(3)]
-        M = np.array(gt.PAYOFF_3).T
-        exp = [sum(M[r][j] * onehot[j] for j in range(3)) for r in range(3)]
-        expect = sl.GLOBAL_MODES[max(range(3), key=lambda r: exp[r])]
-        assert got == expect
+def test_enemy_best_response_adversarial():
+    # 对抗性应对: 我方行固定, 敌方挑最小化我方 payoff 的列。
+    # PAYOFF_3 = [[-0.5,0.3,0.8],[0,0,0.2],[-0.3,-0.5,0.5]]
+    # 进攻(row0): min(-0.5,0.3,0.8)=-0.5 -> 列0=进攻
+    # 均衡(row1): min(0,0,0.2)=0 -> 列0=进攻
+    # 防守(row2): min(-0.3,-0.5,0.5)=-0.5 -> 列1=均衡
+    assert rl.enemy_best_response('进攻') == '进攻'
+    assert rl.enemy_best_response('均衡') == '进攻'
+    assert rl.enemy_best_response('防守') == '均衡'
 
 
 def test_commit_actions_legal_and_fire_bool():
@@ -91,3 +87,19 @@ def test_relabel_decisions_rollout_shape_and_legal():
         assert set(d['units']) == set(sl.UNIT_CLASSES)
     # 常数模型 -> 每个模式得分全 0.5, argmax 取 GLOBAL_MODES 第一个='进攻'
     assert all(l == '进攻' for l in labels)
+
+
+def test_step_robots_enemy_fire_flag():
+    from rl import physics as ph
+    # red sentry at x, blue infantry in range; red fires nothing (fire=False)
+    live = {'r1': {'type': '哨兵', 'team': '红', 'x': 40.0, 'y': 50.0, 'hp': 300.0, 'maxhp': 400.0,
+                   'power': 0.0, 'small_heat': 0.0, 'big_heat': 0.0, 'vuln': 0.0,
+                   'ammo17': 0.0, 'ammo42': 0.0, 'dfire': 0.0, 'yaw': 0.0, 'alive': 1},
+            'b1': {'type': '步兵3', 'team': '蓝', 'x': 46.0, 'y': 50.0, 'hp': 275.0, 'maxhp': 275.0,
+                   'power': 0.0, 'small_heat': 0.0, 'big_heat': 0.0, 'vuln': 0.0,
+                   'ammo17': 0.0, 'ammo42': 0.0, 'dfire': 0.0, 'yaw': 0.0, 'alive': 1}}
+    # red does NOT fire -> with enemy_fire=True the BLUE _enemy_fire would also not matter (blue isn't acting),
+    # but the flag matters for the RED team's return fire in a both-teams rollout: verify a clean call.
+    out = ph.step_robots(live, '红', {'哨兵': {'move': '无', 'fire': False}}, dt=3.0, enemy_fire=False)
+    # red fire=False -> blue must take no damage
+    assert out['b1']['hp'] == 275.0

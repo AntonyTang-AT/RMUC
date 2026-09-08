@@ -25,13 +25,11 @@ PAYOFF_3 = gt.PAYOFF_3
 
 
 def enemy_best_response(our_mode, matrix=PAYOFF_3):
-    """敌方对我方提交纯策略 our_mode 的最优应对模式。
-    转置矩阵(敌方行, 我方列), 我方 one-hot 作敌方眼中的对手策略, best_response 取 argmax。"""
+    """敌方对我方提交纯策略 our_mode 的**对抗性**最优应对模式: 选让"我方 payoff 最小"的敌方模式。
+    我方行固定为 i, 敌方在列 j 中挑最小 PAYOFF_3[i][j] —— 敌方损我方(而非早期 argmax 版本反而帮我方)。"""
     i = GLOBAL_MODES.index(our_mode)
-    onehot = [1.0 if k == i else 0.0 for k in range(3)]
-    M = np.array(matrix, float).T
-    idx = gt.best_response(M.tolist(), onehot)
-    return GLOBAL_MODES[idx]
+    row_i = matrix[i]           # 我方行固定 i: 每个敌方选择 j 下的我方 payoff
+    return GLOBAL_MODES[min(range(3), key=lambda j: row_i[j])]
 
 
 def worldstate_from_live(live, dp_t, bounds):
@@ -74,8 +72,8 @@ def rollout_once(dp0, bounds, my_mode, team='红', T=5, dt=None, params=None):
         w = worldstate_from_live(live, dp0, bounds)
         my_act = commit_actions(w, my_mode, my_team)
         en_act = commit_actions(w, e_m, en_team)
-        live = ph.step_robots(live, my_team, my_act, dt, params)
-        live = ph.step_robots(live, en_team, en_act, dt, params)
+        live = ph.step_robots(live, my_team, my_act, dt, params, enemy_fire=False)
+        live = ph.step_robots(live, en_team, en_act, dt, params, enemy_fire=False)
         traj.append(worldstate_from_live(live, dp0, bounds))
     return traj
 
