@@ -45,16 +45,17 @@ def worldstate_from_live(live, dp_t, bounds):
 
 
 def commit_actions(w, mode, team='红'):
-    """team 侧六单位类 -> derive_unit_intent 的 (move, fire)。缺失类补 '无'/False。"""
+    """team 侧六单位类 -> derive_unit_intent 的 (move, fire, target)。缺失类补 '无'/False/'无'。
+    target 供 rl.physics 做**意图化目标选择**(攻击追建筑/防守只打缠斗)。"""
     cls_by_team = {r['type']: r for r in w['robots'].values() if r['team'] == team}
     acts = {}
     for cls in sl.UNIT_CLASSES:
         unit = cls_by_team.get(cls)
         if unit is None:
-            acts[cls] = {'move': '无', 'fire': False}
+            acts[cls] = {'move': '无', 'fire': False, 'target': '无'}
         else:
             it = gm.derive_unit_intent(unit, w, mode)
-            acts[cls] = {'move': it['move'], 'fire': bool(it['fire'])}
+            acts[cls] = {'move': it['move'], 'fire': bool(it['fire']), 'target': it['target']}
     return acts
 
 

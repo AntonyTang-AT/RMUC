@@ -16,3 +16,9 @@ models_hf/
 out_m2/
 rl/out/
 _work/
+
+# M2 评测产物(生成, 不提交)
+out_m2_rb/
+out_m2_eval_old/
+out_m2_eval_rebalanced/
+data.db
