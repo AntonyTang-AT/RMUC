@@ -464,3 +464,7 @@ git commit -m "docs: report forecast evaluation readiness gates"
 - The current SQLite replay does not include a validated onboard visibility stream. Tasks 2 and 6 establish and enforce this boundary; deployable training and deployment claims remain blocked until such a provider is supplied.
 - This plan creates a generic probabilistic adapter and ledger. A live Jev client is a separate follow-up once its SDK/API contract, credentials and runtime latency budget are available.
 - Action recommendation quality remains separate from forecast score until historical action records or a credible forward simulator supports counterfactual evaluation.
+
+## Execution status (2026-09-25)
+
+Tasks 1–6 are implemented and independently reviewed where applicable. Final verification: `python -m pytest tests -q` → **344 passed**. The deployment readiness gate correctly remains false because the current SQLite source does not provide validated sensor/radar visibility. See `.superpowers/sdd/2026-09-25-causal-observable-forecasting/progress.md` for task commits, review findings, rulings, and evidence.
