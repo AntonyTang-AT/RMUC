@@ -183,6 +183,7 @@ git commit -m "feat: define sensor-observable state snapshots"
 - `build_targets(global_truth_by_time, issued_at, horizons=(10, 30, 60, 120), side) -> dict[int, dict | None]` returns `{horizon: {'target_at': int, 'truth': dict, 'censored': False}}`; `None` means censored or unavailable, never nearest-future substitution.
 - `build_side_examples(game_id, observable_history, global_truth, side, horizons=(10, 30, 60, 120)) -> list[dict]` generates a separate row for `side='红'` and `side='蓝'`, with self/opponent feature mapping and global-truth targets.
 - `chronological_group_split(match_rows, train_fraction, validation_fraction) -> dict` sorts by competition order and assigns each complete `match_id` exactly once to train, validation, or test.
+- Split rows must provide an explicit `end_time` or game duration (`时长秒`/`duration_seconds`) so match-window overlaps can be checked; missing duration fails closed.
 - The manifest records all match_id/game_id, time ranges, horizon definitions, feature cutoff, target cutoff, and sensor-provider version. A missing observable history raises a visibility-provider error instead of falling back to global truth.
 
 - [ ] **Step 1: Write exact-horizon, censoring, and two-side tests**
