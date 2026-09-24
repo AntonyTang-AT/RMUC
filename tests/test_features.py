@@ -11,7 +11,7 @@ def test_build_decision_points_structure():
     con.close()
     assert len(dps) > 50
     dp = dps[0]
-    assert dp['t'] == 0.0
+    assert dp['t'] == min(row['时刻秒'] for row in rows)
     assert 'robots' in dp and 'team' in dp
     # 红哨兵 robot_id=7 应在
     assert 7 in dp['robots']
