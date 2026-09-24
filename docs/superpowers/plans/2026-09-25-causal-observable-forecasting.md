@@ -130,7 +130,10 @@ def test_snapshot_maps_self_opponent_without_changing_global_team():
     snap = build_observable_snapshot(obs_pair, 12, self_team='蓝', max_age_by_source={'radar': 2})
     assert snap['self_team'] == '蓝'
     assert snap['opponent_team'] == '红'
-    assert snap['entities']['enemy-1']['team'] == '红'
+    assert snap['entities']['enemy-1']['team'] == '蓝'
+    assert snap['entities']['enemy-1']['role'] == 'self'
+    assert snap['entities']['own-1']['team'] == '红'
+    assert snap['entities']['own-1']['role'] == 'opponent'
 
 
 def test_future_received_or_observed_measurement_is_rejected():
