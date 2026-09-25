@@ -19,6 +19,7 @@ if str(REPO) not in sys.path:
 from forecast.temporal import (HORIZONS, MODES, REGION_LABELS, TRENDS,
                                load_compact, prepare_compact_split)
 from forecast.train import TASKS, load_model, train_model
+from forecast.model import HORIZON_POOL
 from eval.benchmark import evaluate_forecast_ledger, forecast_key
 
 
@@ -128,6 +129,11 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
     report["model_config"] = {
         "input_dim": checkpoint["input_dim"], "hidden": checkpoint["hidden"],
         "layers": checkpoint["layers"], "history": checkpoint.get("history", []),
+    }
+    versions = data.get("global_mode_label_version")
+    report["labeling"] = {
+        "global_mode_label_version": str(versions[0]) if versions is not None else "unknown",
+        "horizon_pool": {str(key): int(value) for key, value in HORIZON_POOL.items()},
     }
     report["accuracy_by_task_horizon"] = {}
     for model_name, buckets in accuracy_counts.items():
