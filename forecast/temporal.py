@@ -260,6 +260,10 @@ def prepare_compact_split(jsonl_gz, out_path, context=12):
         local_mode = np.full((local_n, len(HORIZONS)), -1, dtype=np.int64)
         local_trend = np.full((local_n, len(HORIZONS)), -1, dtype=np.int64)
         local_region = np.full((local_n, len(HORIZONS)), -1, dtype=np.int64)
+        from .entity import ENTITY_SLOTS, ENTITY_TARGET_DIM, entity_target_vector
+        local_entity = np.full(
+            (local_n, len(HORIZONS), len(ENTITY_SLOTS), ENTITY_TARGET_DIM),
+            -1.0, dtype=np.float32)
         local_base_mode = np.full(local_n, -1, dtype=np.int64)
         local_base_region = np.full(local_n, -1, dtype=np.int64)
         local_game_ids = np.full(local_n, int(values[0]["game_id"]), dtype=np.int64)
@@ -275,6 +279,7 @@ def prepare_compact_split(jsonl_gz, out_path, context=12):
             if base["enemy_region"] in REGION_LABELS:
                 local_base_region[i] = REGION_LABELS.index(base["enemy_region"])
             for h_idx, horizon in enumerate(HORIZONS):
+                local_entity[i, h_idx] = entity_target_vector(row, horizon)
                 labels = target_labels(row, horizon)
                 if labels is None:
                     continue
@@ -284,7 +289,8 @@ def prepare_compact_split(jsonl_gz, out_path, context=12):
                     local_region[i, h_idx] = REGION_LABELS.index(labels["enemy_region"])
             local_issued[i] = float(row["issued_at"])
         parts.append({"x": local_x, "mode_y": local_mode, "trend_y": local_trend,
-                      "region_y": local_region, "base_mode": local_base_mode,
+                      "region_y": local_region, "entity_y": local_entity,
+                      "base_mode": local_base_mode,
                       "base_region": local_base_region, "game_ids": local_game_ids,
                       "sides": local_sides, "issued_at": local_issued})
         group_count += 1

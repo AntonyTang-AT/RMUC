@@ -21,6 +21,7 @@ from forecast.temporal import (HORIZONS, MODES, REGION_LABELS, TRENDS,
 from forecast.train import TASKS, load_model, train_model
 from forecast.model import HORIZON_POOL
 from forecast.calibration import CALIBRATION_VERSION, enforce_monotonic_horizon_confidence
+from forecast.entity import ENTITY_SLOTS, decode_entity_forecast
 from eval.benchmark import evaluate_forecast_ledger, forecast_key
 
 
@@ -36,10 +37,11 @@ def _probs(index, n, eps=0.02):
     return values
 
 
-def _row(game_id, side, issued, horizon, task, probs, model, snapshot_hash):
+def _row(game_id, side, issued, horizon, task, probs, model, snapshot_hash,
+         entity_forecasts=None):
     labels = list(LABELS[task])
     profile = HORIZON_PROFILES[int(horizon)]
-    return {
+    row = {
         "prediction_id": f"{model}:{game_id}:{side}:{issued}:{horizon}:{task}",
         "game_id": int(game_id), "side": str(side), "issued_at": float(issued),
         "valid_at": float(issued) + int(horizon), "horizon": int(horizon),
@@ -60,6 +62,9 @@ def _row(game_id, side, issued, horizon, task, probs, model, snapshot_hash):
         "labels": labels,
         "probabilities": {label: float(value) for label, value in zip(labels, probs)},
     }
+    if entity_forecasts is not None:
+        row["entity_forecasts"] = entity_forecasts
+    return row
 
 
 def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
@@ -76,6 +81,7 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
     accuracy_counts = {"temporal_gru_v1": {}, "persistence_v1": {}}
     confusion = {"temporal_gru_v1": {}, "persistence_v1": {}}
     target_counts = {}
+    entity_metrics = {}
     cursor = 0
     with torch.no_grad():
         for xb in loader:
@@ -95,6 +101,67 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
                         for horizon in HORIZONS
                     }
                     calibrated[task] = enforce_monotonic_horizon_confidence(raw)
+                entity_by_horizon = {}
+                if getattr(model, "entity_slots", 0):
+                    for horizon in HORIZONS:
+                        raw_entity = outputs[horizon]["entity_state"][row_idx].detach().cpu().numpy()
+                        entity_by_horizon[horizon] = decode_entity_forecast(
+                            raw_entity, observing_side=side)
+                        target_entity = data.get("entity_y")
+                        if target_entity is not None:
+                            target = target_entity[i, HORIZONS.index(horizon)]
+                            pred_presence = np.asarray([
+                                value["presence_probability"]
+                                for value in entity_by_horizon[horizon].values()
+                            ])
+                            valid = target[:, 0] >= 0
+                            metric = entity_metrics.setdefault(str(horizon), {
+                                "presence_correct": 0, "presence_n": 0,
+                                "position_abs_sum": 0.0, "position_n": 0,
+                                "hp_abs_sum": 0.0, "hp_n": 0,
+                                "by_side": {},
+                                "by_slot": {},
+                            })
+                            truth_presence = target[:, 0] > 0.5
+                            metric["presence_correct"] += int(
+                                np.sum((pred_presence[valid] >= 0.5) == truth_presence[valid]))
+                            metric["presence_n"] += int(np.sum(valid))
+                            for slot_index, (slot_side, _entity_type) in enumerate(ENTITY_SLOTS):
+                                if not valid[slot_index] or not truth_presence[slot_index]:
+                                    continue
+                                pred = entity_by_horizon[horizon][f"{slot_side}:{_entity_type}"]
+                                px = pred["position"]["x"] / 28.0
+                                py = pred["position"]["y"] / 15.0
+                                tx, ty = target[slot_index, 1], target[slot_index, 2]
+                                metric["position_abs_sum"] += abs(px - tx) + abs(py - ty)
+                                metric["position_n"] += 2
+                                metric["hp_abs_sum"] += abs(pred["hp_ratio"] - target[slot_index, 3])
+                                metric["hp_n"] += 1
+                                side_metric = metric["by_side"].setdefault(slot_side, {
+                                    "presence_correct": 0, "presence_n": 0,
+                                    "position_abs_sum": 0.0, "position_n": 0,
+                                    "hp_abs_sum": 0.0, "hp_n": 0,
+                                })
+                                side_metric["presence_correct"] += int(
+                                    (pred_presence[slot_index] >= 0.5) == truth_presence[slot_index])
+                                side_metric["presence_n"] += 1
+                                side_metric["position_abs_sum"] += abs(px - tx) + abs(py - ty)
+                                side_metric["position_n"] += 2
+                                side_metric["hp_abs_sum"] += abs(pred["hp_ratio"] - target[slot_index, 3])
+                                side_metric["hp_n"] += 1
+                                slot_key = f"{slot_side}:{_entity_type}"
+                                slot_metric = metric["by_slot"].setdefault(slot_key, {
+                                    "presence_correct": 0, "presence_n": 0,
+                                    "position_abs_sum": 0.0, "position_n": 0,
+                                    "hp_abs_sum": 0.0, "hp_n": 0,
+                                })
+                                slot_metric["presence_correct"] += int(
+                                    (pred_presence[slot_index] >= 0.5) == truth_presence[slot_index])
+                                slot_metric["presence_n"] += 1
+                                slot_metric["position_abs_sum"] += abs(px - tx) + abs(py - ty)
+                                slot_metric["position_n"] += 2
+                                slot_metric["hp_abs_sum"] += abs(pred["hp_ratio"] - target[slot_index, 3])
+                                slot_metric["hp_n"] += 1
                 for h_idx, horizon in enumerate(HORIZONS):
                     for task, (key, n_classes) in TASKS.items():
                         y = int(data[key][i, h_idx])
@@ -119,7 +186,9 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
                         cm[y, predicted_label] += 1
                         target_counts.setdefault(bucket, np.zeros(n_classes, dtype=np.int64))[y] += 1
                         predictions.append(_row(gid, side, issued, horizon, task, probs,
-                                                "temporal_gru_v1", snap_hash))
+                                                "temporal_gru_v1", snap_hash,
+                                                entity_forecasts=(entity_by_horizon.get(horizon)
+                                                                  if task == "global_mode" else None)))
                         if task == "global_mode":
                             bi = int(data["base_mode"][i])
                         elif task == "enemy_region":
@@ -150,6 +219,7 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
     report["model_config"] = {
         "input_dim": checkpoint["input_dim"], "hidden": checkpoint["hidden"],
         "layers": checkpoint["layers"], "history": checkpoint.get("history", []),
+        "entity_slots": int(checkpoint.get("entity_slots", 0)),
     }
     versions = data.get("global_mode_label_version")
     report["labeling"] = {
@@ -158,6 +228,7 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
         "horizon_profiles": HORIZON_PROFILES,
         "stable_tasks": list(LABELS),
         "calibration_version": CALIBRATION_VERSION,
+        "entity_slots": len(ENTITY_SLOTS),
     }
     report["accuracy_by_task_horizon"] = {}
     for model_name, buckets in accuracy_counts.items():
@@ -196,6 +267,31 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
             LABELS[bucket.split('@', 1)[0]], counts)}
         for bucket, counts in target_counts.items()
     }
+    if entity_metrics:
+        report["entity_forecast_metrics"] = {}
+        for horizon, values in entity_metrics.items():
+            report["entity_forecast_metrics"][f"{horizon}s"] = {
+                "slot_count": len(ENTITY_SLOTS),
+                "presence_accuracy": float(values["presence_correct"] / max(1, values["presence_n"])),
+                "position_mae_normalized": float(values["position_abs_sum"] / max(1, values["position_n"])),
+                "hp_mae": float(values["hp_abs_sum"] / max(1, values["hp_n"])),
+                "by_side": {
+                    side: {
+                        "presence_accuracy": float(side_values["presence_correct"] / max(1, side_values["presence_n"])),
+                        "position_mae_normalized": float(side_values["position_abs_sum"] / max(1, side_values["position_n"])),
+                        "hp_mae": float(side_values["hp_abs_sum"] / max(1, side_values["hp_n"])),
+                    }
+                    for side, side_values in values["by_side"].items()
+                },
+                "by_slot": {
+                    slot: {
+                        "presence_accuracy": float(slot_values["presence_correct"] / max(1, slot_values["presence_n"])),
+                        "position_mae_normalized": float(slot_values["position_abs_sum"] / max(1, slot_values["position_n"])),
+                        "hp_mae": float(slot_values["hp_abs_sum"] / max(1, slot_values["hp_n"])),
+                    }
+                    for slot, slot_values in values["by_slot"].items()
+                },
+            }
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as stream:
         json.dump(report, stream, ensure_ascii=False, indent=2)

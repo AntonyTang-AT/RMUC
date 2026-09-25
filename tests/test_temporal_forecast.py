@@ -4,6 +4,7 @@ import torch
 from forecast.model import HORIZON_POOL, TemporalForecastNet
 from forecast.calibration import enforce_monotonic_horizon_confidence
 from forecast.temporal import FEATURE_DIM, HORIZON_PROFILES, feature_vector, target_labels
+from forecast.entity import ENTITY_SLOTS, ENTITY_TARGET_DIM
 
 
 def _example():
@@ -59,3 +60,9 @@ def test_horizon_calibration_widens_overconfident_farther_distribution():
     maxima = [max(calibrated[h]) for h in (10, 30, 60, 120)]
     assert all(a >= b - 1e-6 for a, b in zip(maxima, maxima[1:]))
     assert all(abs(sum(calibrated[h]) - 1.0) < 1e-6 for h in (10, 30, 60, 120))
+
+
+def test_temporal_model_can_emit_entity_slots():
+    model = TemporalForecastNet(entity_slots=len(ENTITY_SLOTS))
+    outputs = model(torch.zeros(2, 12, FEATURE_DIM))
+    assert outputs[10]["entity_state"].shape == (2, len(ENTITY_SLOTS), ENTITY_TARGET_DIM)
