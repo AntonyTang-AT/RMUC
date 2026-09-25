@@ -8,6 +8,12 @@ from torch import nn
 from .temporal import FEATURE_DIM, HORIZONS, MODES, REGION_LABELS, TRENDS
 
 
+# Near forecasts preserve high-frequency snapshots; distant forecasts use
+# progressively coarser temporal bins.  The compact dataset keeps one causal
+# window, and this profile changes only the view consumed by each head.
+HORIZON_POOL = {10: 1, 30: 2, 60: 3, 120: 6}
+
+
 class TemporalForecastNet(nn.Module):
     """Shared GRU encoder with typed heads for every forecast horizon."""
 
@@ -33,9 +39,22 @@ class TemporalForecastNet(nn.Module):
     def forward(self, x):
         if x.ndim != 3 or x.shape[-1] != self.input_dim:
             raise ValueError(f"expected [batch,time,{self.input_dim}], got {tuple(x.shape)}")
-        h = self.input_proj(x)
-        h, _ = self.encoder(h)
-        h = self.norm(h[:, -1])
-        return {horizon: {task: head(h) for task, head in self.heads[str(horizon)].items()}
-                for horizon in HORIZONS}
-
+        projected = self.input_proj(x)
+        outputs = {}
+        for horizon in HORIZONS:
+            factor = HORIZON_POOL[horizon]
+            if factor > 1:
+                usable = (projected.shape[1] // factor) * factor
+                if usable == 0:
+                    view = projected[:, -1:]
+                else:
+                    view = projected[:, -usable:]
+                    view = view.reshape(view.shape[0], usable // factor, factor, view.shape[-1]).mean(dim=2)
+            else:
+                view = projected
+            encoded, _ = self.encoder(view)
+            pooled = self.norm(encoded[:, -1])
+            outputs[horizon] = {
+                task: head(pooled) for task, head in self.heads[str(horizon)].items()
+            }
+        return outputs

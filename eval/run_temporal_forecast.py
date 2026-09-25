@@ -62,6 +62,8 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
     truth = {}
     base_rows = []
     accuracy_counts = {"temporal_gru_v1": {}, "persistence_v1": {}}
+    confusion = {"temporal_gru_v1": {}, "persistence_v1": {}}
+    target_counts = {}
     cursor = 0
     with torch.no_grad():
         for xb in loader:
@@ -90,6 +92,10 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
                         item["n"] += 1
                         side_item["correct"] += int(predicted_label == y)
                         side_item["n"] += 1
+                        cm = confusion["temporal_gru_v1"].setdefault(
+                            bucket, np.zeros((n_classes, n_classes), dtype=np.int64))
+                        cm[y, predicted_label] += 1
+                        target_counts.setdefault(bucket, np.zeros(n_classes, dtype=np.int64))[y] += 1
                         predictions.append(_row(gid, side, issued, horizon, task, probs,
                                                 "temporal_gru_v1", snap_hash))
                         if task == "global_mode":
@@ -106,6 +112,9 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
                             item["n"] += 1
                             side_item["correct"] += int(bi == y)
                             side_item["n"] += 1
+                            cm = confusion["persistence_v1"].setdefault(
+                                bucket, np.zeros((n_classes, n_classes), dtype=np.int64))
+                            cm[y, bi] += 1
                         base_probs = _probs(bi if bi >= 0 else None, n_classes)
                         if base_probs is not None:
                             base_rows.append(_row(gid, side, issued, horizon, task, base_probs,
@@ -136,6 +145,27 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
                     for side, side_values in values["by_side"].items()
                 },
             }
+    report["macro_f1_by_task_horizon"] = {}
+    for model_name, buckets in confusion.items():
+        report["macro_f1_by_task_horizon"][model_name] = {}
+        for bucket, matrix in buckets.items():
+            scores = []
+            for class_idx in range(matrix.shape[0]):
+                tp = float(matrix[class_idx, class_idx])
+                fp = float(matrix[:, class_idx].sum() - tp)
+                fn = float(matrix[class_idx, :].sum() - tp)
+                denom = 2.0 * tp + fp + fn
+                scores.append((2.0 * tp / denom) if denom else 0.0)
+            report["macro_f1_by_task_horizon"][model_name][bucket] = {
+                "macro_f1": float(np.mean(scores)),
+                "per_class": {LABELS[bucket.split('@', 1)[0]][i]: float(v)
+                              for i, v in enumerate(scores)},
+            }
+    report["target_distribution_by_task_horizon"] = {
+        bucket: {label: int(count) for label, count in zip(
+            LABELS[bucket.split('@', 1)[0]], counts)}
+        for bucket, counts in target_counts.items()
+    }
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as stream:
         json.dump(report, stream, ensure_ascii=False, indent=2)

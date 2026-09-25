@@ -28,6 +28,7 @@ FEATURES_PER_SLOT = 10
 N_GLOBAL = 7
 FEATURE_DIM = len(ENTITY_TYPES) * 2 * FEATURES_PER_SLOT + N_GLOBAL
 REGION_LABELS = tuple(f"x{x}y{y}" for x in range(4) for y in range(3))
+GLOBAL_MODE_LABEL_VERSION = "relative_margin_v2"
 
 
 def _number(value, default=0.0):
@@ -87,19 +88,31 @@ def _region(point):
     return f"x{xi}y{yi}"
 
 
-def _mode_from_groups(self_entities, opponent_entities):
-    """Derive the same coarse three-way state definition for labels/baseline."""
+def _mode_from_groups(self_entities, opponent_entities, side="红"):
+    """Derive the rebalanced, side-symmetric three-way forecast label.
+
+    V1 counted absolute map halves and required an additional opponent-base
+    condition for ``进攻``.  That produced almost no attack labels and made a
+    persistence classifier look artificially strong.  V2 compares push margin
+    in the acting team's coordinates and adds the base-health differential.
+    Fixed thresholds keep the definition reproducible across splits.
+    """
     own_mobile = _mobile(self_entities)
     opp_mobile = _mobile(opponent_entities)
-    own_push = sum(1 for e in own_mobile if (e.get("position") or [MAP_X / 2])[0] > MAP_X / 2)
-    opp_push = sum(1 for e in opp_mobile if (e.get("position") or [MAP_X / 2])[0] < MAP_X / 2)
+    if side == "蓝":
+        own_push = sum(1 for e in own_mobile if (e.get("position") or [MAP_X / 2])[0] < MAP_X / 2)
+        opp_push = sum(1 for e in opp_mobile if (e.get("position") or [MAP_X / 2])[0] >= MAP_X / 2)
+    else:
+        own_push = sum(1 for e in own_mobile if (e.get("position") or [MAP_X / 2])[0] > MAP_X / 2)
+        opp_push = sum(1 for e in opp_mobile if (e.get("position") or [MAP_X / 2])[0] <= MAP_X / 2)
     own_base = next((e for e in self_entities if e.get("entity_type") == "基地"), None)
     opp_base = next((e for e in opponent_entities if e.get("entity_type") == "基地"), None)
     own_hp = _hp_ratio(own_base) if own_base else 1.0
     opp_hp = _hp_ratio(opp_base) if opp_base else 1.0
-    if own_hp < 0.5 or opp_push - own_push >= 2:
+    score = float(own_push - opp_push) + 2.0 * (opp_hp - own_hp)
+    if score <= -1.0:
         return "防守"
-    if own_push - opp_push >= 2 and opp_hp < 0.9:
+    if score >= 1.0:
         return "进攻"
     return "均衡"
 
@@ -151,7 +164,7 @@ def baseline_labels(example):
     self_entities = _entities(observable, "self_entities")
     opponent_entities = _entities(observable, "opponent_entities")
     return {
-        "global_mode": _mode_from_groups(self_entities, opponent_entities),
+        "global_mode": _mode_from_groups(self_entities, opponent_entities, example.get("side", "红")),
         "opponent_trend": "稳定",
         "enemy_region": _region(_centroid(_mobile(opponent_entities))),
     }
@@ -180,7 +193,7 @@ def target_labels(example, horizon):
         elif delta_toward <= -0.8:
             trend = "回撤"
     return {
-        "global_mode": _mode_from_groups(self_future, opp_future),
+        "global_mode": _mode_from_groups(self_future, opp_future, side),
         "opponent_trend": trend,
         "enemy_region": _region(future_center),
     }
@@ -266,7 +279,8 @@ def prepare_compact_split(jsonl_gz, out_path, context=12):
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(out_path, **arrays,
                         horizons=np.asarray(HORIZONS, dtype=np.int64),
-                        feature_dim=np.asarray([FEATURE_DIM], dtype=np.int64))
+                        feature_dim=np.asarray([FEATURE_DIM], dtype=np.int64),
+                        global_mode_label_version=np.asarray([GLOBAL_MODE_LABEL_VERSION]))
     return {"examples": n, "groups": group_count, "feature_dim": FEATURE_DIM,
             "path": str(out_path)}
 

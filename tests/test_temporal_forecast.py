@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from forecast.model import TemporalForecastNet
+from forecast.model import HORIZON_POOL, TemporalForecastNet
 from forecast.temporal import FEATURE_DIM, feature_vector, target_labels
 
 
@@ -42,3 +42,4 @@ def test_temporal_model_heads():
     assert set(outputs) == {10, 30, 60, 120}
     assert outputs[10]["global_mode"].shape == (2, 3)
     assert outputs[120]["enemy_region"].shape == (2, 12)
+    assert HORIZON_POOL == {10: 1, 30: 2, 60: 3, 120: 6}
