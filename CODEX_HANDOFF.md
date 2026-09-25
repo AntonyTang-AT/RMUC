@@ -715,4 +715,5 @@ Runtime：runtime/decide.py
 - 该适配器是 1 秒粒度的规则字段回放，不是原始网络包；数据集中没有协议中的延迟、丢包、余弹和完整增益包。SQLite 其余未筛选字段仍是全局回放真值，只能用于目标标签和评分。
 - 部署/评估门禁由 `eval/forecast_report.py` 汇总。指定此提供器时来源记为 `visibility_masked_replay`，结果代表规则允许字段的回放评估。
 - 已执行 `python eval/prepare_forecast_dataset.py --out-dir out_m2/forecast_dataset`。生成 171,292 条双视角样本：train 101,410、validation 34,114、test 35,768；10/30/60/120 秒目标成熟率为 97.85%/92.84%/85.69%/71.37%。每条样本含 `observable`、`visibility_provider`、精确未来 `targets` 和 `split`，压缩文件及 manifest 位于 `out_m2/forecast_dataset/`。
-- 最近全量测试：`python -m pytest tests -q` → **344 passed**，包含整数机器人 ID 回归测试。
+- 具体字段契约见 `docs/forecast_visibility_contract.md`。`events` 表尚未原样注入，因为官方协议对事件有全队广播、己方广播和雷达专用的不同接收范围；需完成逐事件映射后再加入。
+- 最近全量测试：`python -m pytest tests -q` → **353 passed**，包含整数机器人 ID 回归测试。
