@@ -2,7 +2,8 @@ import numpy as np
 import torch
 
 from forecast.model import HORIZON_POOL, TemporalForecastNet
-from forecast.temporal import FEATURE_DIM, feature_vector, target_labels
+from forecast.calibration import enforce_monotonic_horizon_confidence
+from forecast.temporal import FEATURE_DIM, HORIZON_PROFILES, feature_vector, target_labels
 
 
 def _example():
@@ -43,3 +44,18 @@ def test_temporal_model_heads():
     assert outputs[10]["global_mode"].shape == (2, 3)
     assert outputs[120]["enemy_region"].shape == (2, 12)
     assert HORIZON_POOL == {10: 1, 30: 2, 60: 3, 120: 6}
+    assert [HORIZON_PROFILES[h]["detail_level"] for h in (10, 30, 60, 120)] == [
+        "high", "medium_high", "medium", "coarse"
+    ]
+
+
+def test_horizon_calibration_widens_overconfident_farther_distribution():
+    calibrated = enforce_monotonic_horizon_confidence({
+        10: [0.60, 0.25, 0.15],
+        30: [0.80, 0.10, 0.10],
+        60: [0.70, 0.20, 0.10],
+        120: [0.90, 0.05, 0.05],
+    })
+    maxima = [max(calibrated[h]) for h in (10, 30, 60, 120)]
+    assert all(a >= b - 1e-6 for a, b in zip(maxima, maxima[1:]))
+    assert all(abs(sum(calibrated[h]) - 1.0) < 1e-6 for h in (10, 30, 60, 120))

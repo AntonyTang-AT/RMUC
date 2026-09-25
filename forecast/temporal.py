@@ -30,6 +30,37 @@ FEATURE_DIM = len(ENTITY_TYPES) * 2 * FEATURES_PER_SLOT + N_GLOBAL
 REGION_LABELS = tuple(f"x{x}y{y}" for x in range(4) for y in range(3))
 GLOBAL_MODE_LABEL_VERSION = "relative_margin_v2"
 
+# The task set is intentionally stable across horizons.  Longer horizons
+# become less specific through nested aggregation and a wider uncertainty
+# budget; they do not silently drop classes or switch to a different label
+# contract.
+HORIZON_PROFILES = {
+    10: {
+        "detail_level": "high",
+        "temporal_view": "12 raw snapshots",
+        "spatial_view": "12-cell enemy centroid",
+        "scope": "unit/building changes, enemy trend, short action candidates",
+    },
+    30: {
+        "detail_level": "medium_high",
+        "temporal_view": "6 two-snapshot bins",
+        "spatial_view": "12-cell enemy centroid plus local region mass",
+        "scope": "formation and local control changes",
+    },
+    60: {
+        "detail_level": "medium",
+        "temporal_view": "4 three-snapshot bins",
+        "spatial_view": "12-cell distribution plus macro x-band",
+        "scope": "area control, push depth, building exchange",
+    },
+    120: {
+        "detail_level": "coarse",
+        "temporal_view": "2 six-snapshot bins",
+        "spatial_view": "12-cell distribution plus coarse side of map",
+        "scope": "overall attack/defense direction and base risk",
+    },
+}
+
 
 def _number(value, default=0.0):
     if isinstance(value, bool) or not isinstance(value, (int, float)):

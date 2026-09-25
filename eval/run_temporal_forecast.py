@@ -17,9 +17,10 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 from forecast.temporal import (HORIZONS, MODES, REGION_LABELS, TRENDS,
-                               load_compact, prepare_compact_split)
+                               HORIZON_PROFILES, load_compact, prepare_compact_split)
 from forecast.train import TASKS, load_model, train_model
 from forecast.model import HORIZON_POOL
+from forecast.calibration import CALIBRATION_VERSION, enforce_monotonic_horizon_confidence
 from eval.benchmark import evaluate_forecast_ledger, forecast_key
 
 
@@ -37,6 +38,7 @@ def _probs(index, n, eps=0.02):
 
 def _row(game_id, side, issued, horizon, task, probs, model, snapshot_hash):
     labels = list(LABELS[task])
+    profile = HORIZON_PROFILES[int(horizon)]
     return {
         "prediction_id": f"{model}:{game_id}:{side}:{issued}:{horizon}:{task}",
         "game_id": int(game_id), "side": str(side), "issued_at": float(issued),
@@ -44,8 +46,17 @@ def _row(game_id, side, issued, horizon, task, probs, model, snapshot_hash):
         "task": task, "entity_or_region": "global" if task != "enemy_region" else "opponent_centroid",
         "target_schema_version": "temporal-forecast-v1",
         "input_snapshot_hash": snapshot_hash,
-        "visibility_summary": {"provider": "rmuc_2026_referee_radar_protocol_v1"},
-        "model_version": model, "calibration_version": "uncalibrated-v1",
+        "visibility_summary": {
+            "provider": "rmuc_2026_referee_radar_protocol_v1",
+            "detail_level": profile["detail_level"],
+            "temporal_view": profile["temporal_view"],
+            "spatial_view": profile["spatial_view"],
+            "scope": profile["scope"],
+            "base_tasks_stable": True,
+        },
+        "model_version": model,
+        "calibration_version": (CALIBRATION_VERSION if model == "temporal_gru_v1"
+                                 else "baseline-v1"),
         "labels": labels,
         "probabilities": {label: float(value) for label, value in zip(labels, probs)},
     }
@@ -73,6 +84,17 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
                 i = cursor + row_idx
                 gid, side, issued = int(data["game_ids"][i]), str(data["sides"][i]), float(data["issued_at"][i])
                 snap_hash = hashlib.sha256(f"{gid}:{side}:{issued}".encode()).hexdigest()
+                # Keep the task/class contract identical across horizons.  If
+                # a farther horizon is more confident than a nearer one, only
+                # widen its probability vector toward uniform.
+                calibrated = {}
+                for task, (_key, _n_classes) in TASKS.items():
+                    raw = {
+                        horizon: torch.softmax(outputs[horizon][task][row_idx], dim=-1)
+                        .detach().cpu().numpy()
+                        for horizon in HORIZONS
+                    }
+                    calibrated[task] = enforce_monotonic_horizon_confidence(raw)
                 for h_idx, horizon in enumerate(HORIZONS):
                     for task, (key, n_classes) in TASKS.items():
                         y = int(data[key][i, h_idx])
@@ -82,10 +104,9 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
                                      "global" if task != "enemy_region" else "opponent_centroid")
                         expected.append(key_tuple)
                         truth[key_tuple] = LABELS[task][y]
-                        logits = outputs[horizon][task][row_idx]
-                        probs = torch.softmax(logits, dim=-1).cpu().numpy().tolist()
+                        probs = calibrated[task][horizon]
                         bucket = f"{task}@{horizon}s"
-                        predicted_label = int(torch.argmax(logits).item())
+                        predicted_label = int(np.argmax(probs))
                         item = accuracy_counts["temporal_gru_v1"].setdefault(
                             bucket, {"correct": 0, "n": 0, "by_side": {}})
                         side_item = item["by_side"].setdefault(str(side), {"correct": 0, "n": 0})
@@ -134,6 +155,9 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
     report["labeling"] = {
         "global_mode_label_version": str(versions[0]) if versions is not None else "unknown",
         "horizon_pool": {str(key): int(value) for key, value in HORIZON_POOL.items()},
+        "horizon_profiles": HORIZON_PROFILES,
+        "stable_tasks": list(LABELS),
+        "calibration_version": CALIBRATION_VERSION,
     }
     report["accuracy_by_task_horizon"] = {}
     for model_name, buckets in accuracy_counts.items():
