@@ -113,3 +113,19 @@ V3 训练与评估报告：`out_m2/temporal_forecast_v3/temporal_forecast_report
 存在准确率受“多数实体持续存在”影响，不能单独代表模型质量；位置和血量误差随时间变长，符合预测不确定性增加的规律。下一步应进一步按兵种分别报告位置/血量误差，并给位置输出验证集校准区间，而不是只给单点坐标。
 
 V3 报告还包含 ntity_forecast_metrics.*.by_slot，可分别检查 self:英雄、opponent:哨兵 等槽位，避免平均指标掩盖某一兵种的位置或血量预测失败。
+
+## 运行时接入方式
+
+部署端应先用车载传感器和雷达构造 `build_observable_snapshot(...)`，再把快照交给 `TemporalForecastRuntime`。适配器会维护 12 个历史快照，只读取当前及过去可见字段：
+
+```python
+from runtime.temporal_forecast import resolve_temporal_forecaster
+from runtime.decide import TieredDecider
+
+forecaster = resolve_temporal_forecaster(
+    "out_m2/temporal_forecast_v3/temporal_gru_v1.pt", device="cuda", team="红")
+decider = TieredDecider(team="红", temporal_forecaster=forecaster)
+result = decider.decide(dp, bounds, observable_snapshot=current_observable_snapshot)
+```
+
+结果中的 `temporal_forecast.horizons["10"/"30"/"60"/"120"]` 可被 UI、规则路由和大模型慢环共同读取。10 秒预测置信度达到阈值时，快路径会把它作为宏观模式提示；模型失败或没有合法可见快照时自动回退规则，不会用完整回放数据冒充部署传感器输入。

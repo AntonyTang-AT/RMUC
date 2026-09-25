@@ -24,7 +24,8 @@ class TieredDecider:
     """单局可复用的分层决策器。"""
 
     def __init__(self, mode_student=None, tier2_backend=None, unit_student=None,
-                 team='红', smooth_window=3, thresholds=None, as_decision_request=False):
+                 team='红', smooth_window=3, thresholds=None, as_decision_request=False,
+                 temporal_forecaster=None, temporal_mode_threshold=0.7):
         self.student = mode_student
         self.tier2 = tier2_backend if tier2_backend is not None else NullTier2()
         # P1 钩子：未加载时单位仍走规则+意图偏置
@@ -32,6 +33,8 @@ class TieredDecider:
         self.team = team
         self.thresholds = thresholds
         self.as_decision_request = bool(as_decision_request)
+        self.temporal_forecaster = temporal_forecaster
+        self.temporal_mode_threshold = float(temporal_mode_threshold)
         self.smoother = ModeSmoother(window=smooth_window) if mode_student is not None else None
         self.tracker = oi.GameIntentTracker()
         self.prev_w = None
@@ -44,6 +47,8 @@ class TieredDecider:
             'n_tier2_ok': 0,
             'n_tier2_fallback': 0,
             'n_unit_student': 0,
+            'n_temporal_forecast': 0,
+            'n_temporal_mode_hint': 0,
         }
 
     def reset_episode(self):
@@ -52,11 +57,24 @@ class TieredDecider:
         self.mode_hist = []
         if self.smoother is not None:
             self.smoother.reset()
+        if self.temporal_forecaster is not None and hasattr(self.temporal_forecaster, 'reset'):
+            self.temporal_forecaster.reset()
 
-    def decide(self, dp, bounds, base_decision=None, conflict_rate=0.0):
+    def decide(self, dp, bounds, base_decision=None, conflict_rate=0.0,
+               observable_snapshot=None):
         """对单决策点产出带 sidecar 的分层决策。"""
         w = wsmod.build_worldstate(dp, bounds)
         opp = oi.infer_opponent_intent(w, self.prev_w, our_team=self.team, tracker=self.tracker)
+        temporal_forecast = None
+        if self.temporal_forecaster is not None and observable_snapshot is not None:
+            try:
+                temporal_forecast = self.temporal_forecaster.predict(observable_snapshot)
+                if temporal_forecast is not None:
+                    self.stats['n_temporal_forecast'] += 1
+            except Exception:
+                # Forecasting is an enhancement; decision legality and safety
+                # must not depend on a failed optional model.
+                temporal_forecast = None
         stu_conf = None
         raw_mode = None
         if self.student is not None:
@@ -116,8 +134,16 @@ class TieredDecider:
         else:
             # 无学生：规则 mode + 意图偏置填单位
             mode = base.get('global_mode') or gm.derive_global_mode(w)
+            hint = ((temporal_forecast or {}).get('horizons') or {}).get('10', {})
+            hint_mode = ((hint.get('global_mode') or {}).get('top'))
+            hint_conf = float((hint.get('global_mode') or {}).get('confidence') or 0.0)
+            if hint_mode in sl.GLOBAL_MODES and hint_conf >= self.temporal_mode_threshold:
+                mode = hint_mode
+                mode_source = 'tier0_temporal_forecast'
+                self.stats['n_temporal_mode_hint'] += 1
             d_out = mf.refill_units_for_mode(base, w, mode, team=self.team, opp_intent=opp)
-            mode_source = 'tier0_rule'
+            if mode_source == 'fusion':
+                mode_source = 'tier0_rule'
 
         # 最终合法性兜底
         if not sl.validate(rt.strip_sidecar_for_validate(d_out))[0]:
@@ -134,10 +160,20 @@ class TieredDecider:
             w, team=self.team, prev_w=self.prev_w,
             mode=d_out.get('global_mode'), opponent_intent=opp,
             sentry_state=sentry)
+        if temporal_forecast is not None:
+            global_analysis['temporal_forecast_summary'] = {
+                str(horizon): {
+                    'mode': (((temporal_forecast.get('horizons') or {}).get(str(horizon), {})
+                              .get('global_mode') or {}).get('top')),
+                    'confidence': (((temporal_forecast.get('horizons') or {}).get(str(horizon), {})
+                                    .get('global_mode') or {}).get('confidence')),
+                }
+                for horizon in (10, 30, 60, 120)
+            }
         attached = rt.attach_decision_meta(
             d_out, route, opponent_intent=opp, semantic_situation=situ,
             sentry_state=sentry, strategic_intent=strategic,
-            global_analysis=global_analysis)
+            global_analysis=global_analysis, temporal_forecast=temporal_forecast)
         meta = dict(attached.get('decision_meta') or {})
         meta['mode_source'] = mode_source
         meta['tier2_attempted'] = bool(tier2_attempted)
@@ -145,6 +181,7 @@ class TieredDecider:
         meta['sentry_state'] = sentry
         meta['strategic_intent'] = strategic
         meta['global_analysis_schema'] = global_analysis.get('schema_version')
+        meta['temporal_forecast_attached'] = temporal_forecast is not None
         if stu_conf is not None:
             meta['student_conf'] = round(float(stu_conf), 4)
         attached['decision_meta'] = meta
@@ -158,7 +195,8 @@ class TieredDecider:
             return to_decision_request(attached)
         return attached
 
-    def run_series(self, dps, bounds, base_decisions=None, conflict_rate=0.0):
+    def run_series(self, dps, bounds, base_decisions=None, conflict_rate=0.0,
+                   observable_snapshots=None):
         """整局序列。base_decisions 与 dps 等长或 None。"""
         self.reset_episode()
         out = []
@@ -167,5 +205,10 @@ class TieredDecider:
             base = None
             if base_decisions is not None and i < len(base_decisions):
                 base = base_decisions[i]
-            out.append(self.decide(dp, bounds, base_decision=base, conflict_rate=conflict_rate))
+            snapshot = None
+            if observable_snapshots is not None and i < len(observable_snapshots):
+                snapshot = observable_snapshots[i]
+            out.append(self.decide(dp, bounds, base_decision=base,
+                                   conflict_rate=conflict_rate,
+                                   observable_snapshot=snapshot))
         return out

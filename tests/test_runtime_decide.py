@@ -15,6 +15,26 @@ class _FakeStudent:
         return self.mode, self.conf, {self.mode: self.conf}
 
 
+class _FakeTemporal:
+    def __init__(self):
+        self.calls = 0
+
+    def reset(self):
+        self.calls = 0
+
+    def predict(self, snapshot):
+        self.calls += 1
+        return {
+            'schema_version': 'temporal-entity-forecast-v1',
+            'horizons': {
+                '10': {'global_mode': {'top': '进攻', 'confidence': 0.9}},
+                '30': {'global_mode': {'top': '均衡', 'confidence': 0.6}},
+                '60': {'global_mode': {'top': '均衡', 'confidence': 0.5}},
+                '120': {'global_mode': {'top': '防守', 'confidence': 0.4}},
+            },
+        }
+
+
 def _dp(t=10.0, our_base_hp=5000.0, opp_base_hp=5000.0):
     robots = {
         '7': {'type': '哨兵', 'team': '红', 'x': 900.0, 'y': 0.0, 'hp': 1000.0, 'maxhp': 1000.0,
@@ -116,3 +136,20 @@ def test_decision_request_adapter():
     core = from_decision_request(req)
     ok, errs = sl.validate(core)
     assert ok, errs
+
+
+def test_temporal_forecast_is_attached_and_can_hint_mode():
+    temporal = _FakeTemporal()
+    decider = TieredDecider(temporal_forecaster=temporal, team='红')
+    snapshot = {
+        'issued_at': 10.0, 'self_team': '红', 'entities': {},
+    }
+    d = decider.decide(_dp(10.0), _bounds(),
+                       base_decision=sl.build_empty_decision(10.0),
+                       observable_snapshot=snapshot)
+    assert temporal.calls == 1
+    assert d['global_mode'] == '进攻'
+    assert d['temporal_forecast']['schema_version'] == 'temporal-entity-forecast-v1'
+    assert d['decision_meta']['temporal_forecast_attached'] is True
+    clean = rt.strip_sidecar_for_validate(d)
+    assert 'temporal_forecast' not in clean

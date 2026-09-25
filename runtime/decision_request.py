@@ -29,6 +29,7 @@ def to_decision_request(decision):
         'opponent_intent': d.get('opponent_intent'),
         'semantic_situation': d.get('semantic_situation'),
         'global_analysis': d.get('global_analysis'),
+        'temporal_forecast': d.get('temporal_forecast'),
     }
 
 

@@ -140,7 +140,7 @@ def route_tier(w, mode_history=None, our_team='红', conflict_rate=0.0, threshol
 
 def attach_decision_meta(decision, route, opponent_intent=None, semantic_situation=None,
                          sentry_state=None, strategic_intent=None,
-                         global_analysis=None):
+                         global_analysis=None, temporal_forecast=None):
     """在决策旁路挂 decision_meta / opponent_intent / semantic_situation。"""
     d = dict(decision) if decision else {}
     meta = {
@@ -164,6 +164,8 @@ def attach_decision_meta(decision, route, opponent_intent=None, semantic_situati
         d['semantic_situation'] = dict(semantic_situation)
     if global_analysis is not None:
         d['global_analysis'] = dict(global_analysis)
+    if temporal_forecast is not None:
+        d['temporal_forecast'] = dict(temporal_forecast)
     return d
 
 
@@ -176,4 +178,5 @@ def strip_sidecar_for_validate(decision):
     d.pop('opponent_intent', None)
     d.pop('semantic_situation', None)
     d.pop('global_analysis', None)
+    d.pop('temporal_forecast', None)
     return d
