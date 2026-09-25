@@ -61,6 +61,7 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
     expected = []
     truth = {}
     base_rows = []
+    accuracy_counts = {"temporal_gru_v1": {}, "persistence_v1": {}}
     cursor = 0
     with torch.no_grad():
         for xb in loader:
@@ -80,6 +81,15 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
                         truth[key_tuple] = LABELS[task][y]
                         logits = outputs[horizon][task][row_idx]
                         probs = torch.softmax(logits, dim=-1).cpu().numpy().tolist()
+                        bucket = f"{task}@{horizon}s"
+                        predicted_label = int(torch.argmax(logits).item())
+                        item = accuracy_counts["temporal_gru_v1"].setdefault(
+                            bucket, {"correct": 0, "n": 0, "by_side": {}})
+                        side_item = item["by_side"].setdefault(str(side), {"correct": 0, "n": 0})
+                        item["correct"] += int(predicted_label == y)
+                        item["n"] += 1
+                        side_item["correct"] += int(predicted_label == y)
+                        side_item["n"] += 1
                         predictions.append(_row(gid, side, issued, horizon, task, probs,
                                                 "temporal_gru_v1", snap_hash))
                         if task == "global_mode":
@@ -88,6 +98,14 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
                             bi = int(data["base_region"][i])
                         else:
                             bi = 1  # persistence baseline: no evidence of movement
+                        if bi >= 0:
+                            item = accuracy_counts["persistence_v1"].setdefault(
+                                bucket, {"correct": 0, "n": 0, "by_side": {}})
+                            side_item = item["by_side"].setdefault(str(side), {"correct": 0, "n": 0})
+                            item["correct"] += int(bi == y)
+                            item["n"] += 1
+                            side_item["correct"] += int(bi == y)
+                            side_item["n"] += 1
                         base_probs = _probs(bi if bi >= 0 else None, n_classes)
                         if base_probs is not None:
                             base_rows.append(_row(gid, side, issued, horizon, task, base_probs,
@@ -102,6 +120,22 @@ def _evaluate(model_path, test_npz, out_path, device="auto", batch_size=512):
         "input_dim": checkpoint["input_dim"], "hidden": checkpoint["hidden"],
         "layers": checkpoint["layers"], "history": checkpoint.get("history", []),
     }
+    report["accuracy_by_task_horizon"] = {}
+    for model_name, buckets in accuracy_counts.items():
+        report["accuracy_by_task_horizon"][model_name] = {}
+        for bucket, values in buckets.items():
+            report["accuracy_by_task_horizon"][model_name][bucket] = {
+                "accuracy": values["correct"] / max(1, values["n"]),
+                "correct": values["correct"],
+                "n": values["n"],
+                "by_side": {
+                    side: {
+                        "accuracy": side_values["correct"] / max(1, side_values["n"]),
+                        "correct": side_values["correct"], "n": side_values["n"],
+                    }
+                    for side, side_values in values["by_side"].items()
+                },
+            }
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as stream:
         json.dump(report, stream, ensure_ascii=False, indent=2)
