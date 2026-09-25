@@ -708,9 +708,11 @@ Runtime：runtime/decide.py
 
 本项目新增一条因果、可观测的多时域概率预测评估链路，设计规格见 `docs/superpowers/specs/2026-09-25-causal-observable-forecasting-design.md`，工作决定和复核记录见 `.superpowers/sdd/2026-09-25-causal-observable-forecasting/progress.md`。
 
-- 输入与标签分离：回放特征只按 `observed_at <= issued_at` 构造；部署观测通过 `data/observable.py` 的显式传感器/雷达快照接口提供。`timeseries` SQLite 仍是全局回放数据，不是实车可见性记录。
+- 输入与标签分离：回放特征只按 `observed_at <= issued_at` 构造。按 RMUC 2026 通信协议，`data/radar_visibility_replay.py` 向另一方提供敌方机器人类型、有效 XY、当前 HP、队伍金币和雷达标记状态；(0,0) 坐标视为未发送。敌方高度、朝向、功率、热量、累计发弹、最大血量、建筑细节以及数据库没有的余弹/完整增益包被剔除。
 - 目标时间固定为发布时刻后 10/30/60/120 秒，按精确时间查找；比赛结束或对应真值缺失时记为删失，不找最近帧替代。比赛组按比赛时间顺序整体进入 train/validation/test。
 - 预测先写不可变 JSONL ledger，经 schema 校验后，在目标时刻成熟时评分。分类使用 Brier、log loss、校准统计；连续概率分布支持 CRPS 和 energy score。报告同时列出红方、蓝方、等权侧别宏平均和按样本量池化微平均，并以整局聚类重采样估计差值区间。
 - 决策基准 CLI 的旧 JSONL 输入契约是 `game_id,side,index,decision`；概率预测通过 `eval.prediction_ledger` 和 `evaluate_forecast_ledger`，不要把两类接口混用。
-- 部署门禁由 `eval/forecast_report.py` 汇总。当前可见性提供器缺失，故 deployment readiness 为 false；SQLite 全局回放结果只能称为 oracle replay，不能作为车载传感器效果结论。
+- 该适配器是 1 秒粒度的规则字段回放，不是原始网络包；数据集中没有协议中的延迟、丢包、余弹和完整增益包。SQLite 其余未筛选字段仍是全局回放真值，只能用于目标标签和评分。
+- 部署/评估门禁由 `eval/forecast_report.py` 汇总。指定此提供器时来源记为 `visibility_masked_replay`，结果代表规则允许字段的回放评估。
+- 已执行 `python eval/prepare_forecast_dataset.py --out-dir out_m2/forecast_dataset`。生成 171,292 条双视角样本：train 101,410、validation 34,114、test 35,768；10/30/60/120 秒目标成熟率为 97.85%/92.84%/85.69%/71.37%。每条样本含 `observable`、`visibility_provider`、精确未来 `targets` 和 `split`，压缩文件及 manifest 位于 `out_m2/forecast_dataset/`。
 - 最近全量测试：`python -m pytest tests -q` → **344 passed**，包含整数机器人 ID 回归测试。

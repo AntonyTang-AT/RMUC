@@ -27,6 +27,19 @@ def test_manifest_rejects_missing_or_duplicate_split_groups():
         build_forecast_manifest(MATCHES, {'train': ['m1'], 'validation': ['m1'], 'test': ['m2']})
 
 
+def test_manifest_allows_multiple_rounds_inside_one_match_group():
+    matches = [
+        {'game_id': 1, '赛区': '东部赛区', '场次号': 10, 'competition_order': 1},
+        {'game_id': 2, '赛区': '东部赛区', '场次号': 10, 'competition_order': 2},
+        {'game_id': 3, '赛区': '南部赛区', '场次号': 2, 'competition_order': 3},
+    ]
+    manifest = build_forecast_manifest(
+        matches, {'train': ['东部赛区:10'], 'validation': [], 'test': ['南部赛区:2']},
+    )
+    assert manifest['all_match_ids'] == ['东部赛区:10', '南部赛区:2']
+    assert manifest['all_game_ids'] == [1, 2, 3]
+
+
 def test_missing_visibility_provider_blocks_deployment_readiness():
     manifest = build_forecast_manifest(MATCHES, SPLIT, visibility_provider=None)
     report = summarize_readiness(
@@ -57,3 +70,16 @@ def test_any_future_feature_or_bad_probability_schema_blocks_readiness():
     assert report['probability_schema_pass'] is False
     assert report['red_blue_complete'] is False
     assert report['deployment_ready'] is False
+
+
+def test_declared_visibility_mask_can_pass_observable_gate():
+    manifest = build_forecast_manifest(MATCHES, SPLIT, visibility_provider='radar-mask-v1')
+    report = summarize_readiness(
+        manifest,
+        {'future_feature_count': 0, 'split_overlap_count': 0},
+        {'invalid_count': 0, 'probability_schema_pass': True, 'red_blue_complete': True},
+        {'side_macro_average': {'score': .2}, 'pooled_micro': {'score': .25}},
+    )
+    assert manifest['source_mode'] == 'visibility_masked_replay'
+    assert report['observable_input_pass'] is True
+    assert report['deployment_ready'] is True

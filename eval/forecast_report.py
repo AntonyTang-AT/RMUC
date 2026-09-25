@@ -18,9 +18,13 @@ def _digest(value):
 
 def _match_id(row):
     match_id = row.get('match_id')
-    if match_id is None or not str(match_id).strip():
-        raise ValueError('every match row must include a match_id')
-    return str(match_id)
+    if match_id is not None and str(match_id).strip():
+        return str(match_id)
+    region = row.get('赛区', row.get('region'))
+    number = row.get('场次号', row.get('match_number'))
+    if region is None or number is None or not str(region).strip():
+        raise ValueError('every match row must include match_id or 赛区 plus 场次号')
+    return f'{region}:{number}'
 
 
 def build_forecast_manifest(matches, split, horizons=DEFAULT_HORIZONS,
@@ -35,21 +39,21 @@ def build_forecast_manifest(matches, split, horizons=DEFAULT_HORIZONS,
     if any(game_id is None for game_id in game_ids) or len(set(game_ids)) != len(game_ids):
         raise ValueError('game_id values must be present and unique')
     match_ids = [_match_id(row) for row in matches]
-    if len(set(match_ids)) != len(match_ids):
-        raise ValueError('match rows must contain one row per unique match_id')
+    match_group_ids = sorted(set(match_ids))
     if not isinstance(split, Mapping):
         raise ValueError('split must map train/validation/test to match IDs')
     split_ids = {name: list(split.get(name, ())) for name in ('train', 'validation', 'test')}
     flattened = [str(item) for values in split_ids.values() for item in values]
-    if len(flattened) != len(set(flattened)) or set(flattened) != set(match_ids):
+    if len(flattened) != len(set(flattened)) or set(flattened) != set(match_group_ids):
         raise ValueError('split must assign every match exactly once')
     if not horizons or any(isinstance(h, bool) or not isinstance(h, int) or h <= 0 for h in horizons):
         raise ValueError('horizons must be positive integer seconds')
     ordered_games = sorted(matches, key=lambda row: (row.get('competition_order', 0), str(row['game_id'])))
+    ordered_match_ids = list(dict.fromkeys(_match_id(row) for row in ordered_games))
     return {
         'schema_version': 1,
         'all_game_ids': [row['game_id'] for row in ordered_games],
-        'all_match_ids': [row['match_id'] for row in sorted(matches, key=lambda row: (row.get('competition_order', 0), str(row['match_id'])))],
+        'all_match_ids': ordered_match_ids,
         'competition_order': {str(row['game_id']): row.get('competition_order') for row in ordered_games},
         'split': {name: [str(match_id) for match_id in values] for name, values in split_ids.items()},
         'split_pass': True,
@@ -61,10 +65,10 @@ def build_forecast_manifest(matches, split, horizons=DEFAULT_HORIZONS,
         'label_version': label_version,
         'feature_cutoff': feature_cutoff,
         'target_cutoff': 'target_at = issued_at + horizon; exact timestamp only',
-        'source_mode': 'sensor_observable' if visibility_provider else 'oracle_replay',
+        'source_mode': 'visibility_masked_replay' if visibility_provider else 'oracle_replay',
         'ordered_game_ids_sha256': _digest([row['game_id'] for row in ordered_games]),
         'manifest_sha256': _digest({
-            'games': [(row['game_id'], row['match_id'], row.get('competition_order')) for row in ordered_games],
+            'games': [(row['game_id'], _match_id(row), row.get('competition_order')) for row in ordered_games],
             'split': split_ids,
             'horizons': sorted(set(horizons)),
             'provider': visibility_provider,
@@ -86,7 +90,8 @@ def summarize_readiness(manifest, feature_audit, prediction_audit, scores):
     split_pass = (manifest.get('split_pass') is True
                   and isinstance(split_overlap_count, int)
                   and not isinstance(split_overlap_count, bool) and split_overlap_count == 0)
-    observable_input_pass = bool(manifest.get('visibility_provider')) and manifest.get('source_mode') != 'oracle_replay'
+    observable_input_pass = (bool(manifest.get('visibility_provider'))
+                             and manifest.get('source_mode') == 'visibility_masked_replay')
     invalid_count = prediction_audit.get('invalid_count')
     probability_schema_pass = (isinstance(invalid_count, int) and not isinstance(invalid_count, bool)
                                and invalid_count == 0

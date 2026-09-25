@@ -18,7 +18,7 @@
 - Fixed first-release horizons are 10, 30, 60, and 120 seconds; incomplete end-of-game targets are censored.
 - Every game must run in red and blue self/opponent views; report both views, their side-level macro average, and pooled micro metrics.
 - Red/blue views from one game are one statistical cluster. Bootstrap by complete match/game group.
-- Never claim deployment-valid results from the existing omniscient replay table until a sensor log, visibility mask, or validated visibility replay provider supplies observable inputs.
+- Never claim complete raw-sensor deployment results from replay alone. The current official dataset has a documented radar-highlight field and uses a protocol-field replay provider; reports must remain labeled `visibility_masked_replay` because raw packets, latency/loss, remaining ammo and full buffs are absent.
 - Never treat the existing lookahead heuristic as a human gold label or causal action-value label.
 
 ## Review Focus
@@ -450,7 +450,7 @@ Expected: PASS; report any pre-existing unrelated failures separately.
 
 - [ ] **Step 4: Update handoff docs with measured state**
 
-Document current readiness gates and generated artifact paths. State that deployment validation is blocked until a real sensor log or validated visibility replay provider exists; do not report oracle replay scores as deployment performance.
+Document current readiness gates and generated artifact paths. State that the generated protocol-field replay is `visibility_masked_replay`; do not report it as a complete raw-sensor deployment result.
 
 - [ ] **Step 5: Commit**
 
@@ -461,10 +461,10 @@ git commit -m "docs: report forecast evaluation readiness gates"
 
 ## Plan Caveats
 
-- The current SQLite replay does not include a validated onboard visibility stream. Tasks 2 and 6 establish and enforce this boundary; deployable training and deployment claims remain blocked until such a provider is supplied.
+- The current SQLite replay does not include raw onboard packets, latency/loss, remaining-ammo or full-buff streams. Tasks 2 and 6 establish a protocol-field visibility provider; resulting claims remain limited to `visibility_masked_replay` until those missing streams are validated.
 - This plan creates a generic probabilistic adapter and ledger. A live Jev client is a separate follow-up once its SDK/API contract, credentials and runtime latency budget are available.
 - Action recommendation quality remains separate from forecast score until historical action records or a credible forward simulator supports counterfactual evaluation.
 
 ## Execution status (2026-09-25)
 
-Tasks 1–6 are implemented and independently reviewed where applicable. Final verification: `python -m pytest tests -q` → **344 passed**. The deployment readiness gate correctly remains false because the current SQLite source does not provide validated sensor/radar visibility. See `.superpowers/sdd/2026-09-25-causal-observable-forecasting/progress.md` for task commits, review findings, rulings, and evidence.
+Tasks 1–6 are implemented and independently reviewed where applicable. Final verification after the protocol-field adapter: `python -m pytest tests -q` → **353 passed**. The dataset's documented radar-highlight field and the RMUC communication protocol now drive a one-second `visibility_masked_replay`; it exposes only fields available in this database and is not a complete raw packet stream. See `.superpowers/sdd/2026-09-25-causal-observable-forecasting/progress.md` for task commits, review findings, rulings, and evidence.

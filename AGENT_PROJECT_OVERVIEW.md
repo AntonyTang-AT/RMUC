@@ -227,5 +227,7 @@ Track1 / Track2 v3fix2 已结案（分析 §7.11–7.13、§9）。
 - `data/observable.py` 定义车载传感器/雷达快照及可见性边界。当前 SQLite 回放仍是全局真值，不能冒充实车可观测输入。
 - `data/forecast_targets.py` 按 10/30/60/120 秒精确时刻生成目标，比赛结束前没有目标的样本按删失处理；`data/forecast_splits.py` 按比赛顺序整体划分比赛组。
 - `eval/forecast_schema.py` 与 `eval/prediction_ledger.py` 校验并保存概率预测；`eval/benchmark.py` 支持红蓝两侧，概率评分报告 Brier、log loss、CRPS/energy score、校准统计、侧别宏平均、样本池化微平均和整局聚类区间。
-- `eval/forecast_report.py` 输出数据清单和 readiness 门禁。当前缺少经验证的车载传感器/可见性回放提供器，因此部署就绪状态必须为 false；基于 SQLite 全局回放得到的数值只能标为 oracle replay 结果。
+- `data/radar_visibility_replay.py` 按 RMUC 2026 通信协议建立规则可见输入：敌方机器人保留协议允许的类型、XY、当前 HP、队伍金币及雷达标记状态；坐标 `(0,0)` 视为未发送。敌方高度、朝向、功率、热量、累计发弹、最大血量、建筑细节以及数据集中不存在的剩余弹量/完整增益包不进入输入。己方保留自身完整回传状态。
+- `eval/forecast_report.py` 输出数据清单和 readiness 门禁。当前数据库有按官方协议字段筛选的可见性回放代理，但没有原始网络包、延迟、丢包和完整增益/余弹字段；报告应标为 `visibility_masked_replay`，结论代表规则允许字段的回放评估。
+- 已生成 `out_m2/forecast_dataset/manifest.json` 与三个 gzip JSONL：train 101,410、validation 34,114、test 35,768，共 171,292 条红蓝双视角样本。10/30/60/120 秒目标成熟率分别为 97.85%/92.84%/85.69%/71.37%。
 - 当前验收：`python -m pytest tests -q` → **344 passed**。这证明实现与接口测试通过，不代表模型已经通过真实传感器输入的部署评估。

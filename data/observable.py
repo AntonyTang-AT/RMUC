@@ -1,7 +1,8 @@
-"""Build deployment snapshots only from explicitly supplied sensor observations.
+"""Build snapshots only from explicitly supplied sensor-visible observations.
 
-The global replay table is not a visibility source. Callers must supply a
-sensor log or validated visibility provider before using this contract.
+The global replay table is not itself a visibility source. Callers must supply
+sensor observations or a documented visibility-mask provider, such as the
+positive-only official radar-highlight replay adapter.
 """
 
 from collections.abc import Mapping
