@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-04",
+  "method": "Windows Recycle Bin",
+  "removed_targets": 256,
+  "failed_targets": [],
+  "removed_from_project_gib": 24.42,
+  "preserved_trained_weight_files": 90,
+  "preserved": [
+    "Original replay SQLite database",
+    "Trained project weights",
+    "Official maps",
+    "Acceptance ZIP and extracted bundle",
+    "Project source and small audit reports"
+  ],
+  "note": "Disk space is reclaimed after the user empties the Recycle Bin."
+}
