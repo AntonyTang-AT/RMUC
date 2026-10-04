@@ -110,3 +110,31 @@ def test_physics_env_enemy_moves():
     blue_before = e.dps[0]['robots'][3]['x']   # 回放初值(冻结基准)
     assert abs(blue_after - blue_before) > 1e-6   # 敌方也动 -> 非冻结
     assert abs(e.live[1]['x'] - red_before) < 1e-6  # 红推进已在前一步反映
+
+
+def test_symmetric_fire_default_and_win_condition_type():
+    """仿真默认 symmetric_fire=True; 终局 win_condition 为有限标量。"""
+    e = _env()
+    assert e.symmetric_fire is True
+    e.reset()
+    for _ in range(3):
+        e.step({'英雄': rlenv.ACTION_MEANINGS.index(('推进', True)),
+                '步兵3': rlenv.ACTION_MEANINGS.index(('推进', True))})
+    assert e.t >= e.horizon
+    w = e.win_condition()
+    assert isinstance(w, (float, int)) and abs(w) <= 1.0 + 1e-9
+
+
+def test_fav_align_bonus_prefers_push_on_high_fav():
+    """有 fav_align_scale 时: 高 fav 选推进的即时 bonus > 选回防。"""
+    dps = _dps(4)
+    e = rlenv.M2Env(dps, B, fav_align_scale=0.1, coherence_scale=0.0)
+    e.reset()
+    e._fav_median = -1e9  # 强制当前为高 fav
+    idx_push = rlenv.ACTION_MEANINGS.index(('推进', False))
+    idx_back = rlenv.ACTION_MEANINGS.index(('回防', False))
+    acts_push = {c: idx_push for c in rlenv.AGENTS}
+    acts_back = {c: idx_back for c in rlenv.AGENTS}
+    assert e._fav_align_bonus(acts_push, e.ws[0]) > e._fav_align_bonus(acts_back, e.ws[0])
+    e2 = rlenv.M2Env(dps, B, fav_align_scale=0.0)
+    assert e2._fav_align_bonus(acts_push, e2.ws[0]) == 0.0

@@ -25,3 +25,16 @@ def test_build_worldstate_shape():
     assert len(s7['norm_xy']) == 2
     assert 0.0 <= s7['hp_ratio'] <= 1.0
     assert s7['team'] == '红'
+
+def test_build_worldstate_uses_functional_zone_and_legacy_zone():
+    con = db.connect()
+    rows = db.timeseries_for(con, config.GAME_REF)
+    dps = features.build_decision_points(rows, config.GAME_REF)
+    con.close()
+    b = features.field_bounds(dps)
+    state = ws.build_worldstate(dps[0], b)
+    robot = next(iter(state['robots'].values()))
+    assert robot['zone'] == robot['functional_zone']
+    assert robot['zone'] in ws.ZONE_LABELS
+    assert 'legacy_zone' in robot
+    assert robot['zone_confidence'] in ('high', 'medium', 'low')

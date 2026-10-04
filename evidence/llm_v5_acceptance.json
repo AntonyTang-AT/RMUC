@@ -1,0 +1,412 @@
+{
+  "schema_version": "llm-candidate-acceptance-v1",
+  "required_scenarios": [
+    "红|forecast=false",
+    "红|forecast=true",
+    "蓝|forecast=false",
+    "蓝|forecast=true"
+  ],
+  "scenarios": {
+    "红|forecast=true": {
+      "side": "红",
+      "forecast_context_enabled": true,
+      "n": 144,
+      "parse_rate": 0.9861111111111112,
+      "runtime_delivery_rate": 0.9861111111111112,
+      "raw_parsed": 137,
+      "raw_parse_rate": 0.9513888888888888,
+      "legal_rate_conditional_on_parse": 1.0,
+      "contract_repair_rate": 0.034722222222222224,
+      "unrecoverable_rows": 2,
+      "visible_rows_validated": 144,
+      "expected_global_mode_counts": {
+        "进攻": 92,
+        "防守": 37,
+        "均衡": 15
+      },
+      "semantic_mode_coverage_pass": true,
+      "hdq_by_expected_global_mode": {
+        "进攻": {
+          "n_games": 12,
+          "ci95": [
+            0.05555266203703707,
+            0.274927398989899
+          ],
+          "sample_size_pass": true,
+          "positive_delta_pass": true
+        },
+        "防守": {
+          "n_games": 9,
+          "ci95": [
+            -0.21211111111111108,
+            0.05583333333333335
+          ],
+          "sample_size_pass": false,
+          "positive_delta_pass": false
+        },
+        "均衡": {
+          "n_games": 7,
+          "ci95": [
+            -0.10071428571428573,
+            0.02071428571428571
+          ],
+          "sample_size_pass": false,
+          "positive_delta_pass": false
+        }
+      },
+      "semantic_mode_hdq_pass": false,
+      "strict_generation_pass": false,
+      "repair_budget_pass": true,
+      "structural_pass": false,
+      "end_to_end_hdq": {
+        "n_games": 12,
+        "mean": 0.6274479166666667,
+        "ci95": [
+          0.5718402777777778,
+          0.6897222222222222
+        ]
+      },
+      "end_to_end_hdq_delta_vs_legacy_rule": {
+        "n_games": 12,
+        "mean": 0.04701388888888891,
+        "ci95": [
+          -0.042760416666666634,
+          0.1238888888888889
+        ]
+      },
+      "response_proxy": {
+        "response_score": {
+          "n_games": 12,
+          "mean": 0.49737548039315715,
+          "ci95": [
+            0.46240612291748656,
+            0.5304351080550576
+          ]
+        },
+        "response_movement": {
+          "n_games": 12,
+          "mean": 0.4908529741863075,
+          "ci95": [
+            0.4499438832772166,
+            0.5332772166105499
+          ]
+        },
+        "response_fire": {
+          "n_games": 12,
+          "mean": 0.4697453703703704,
+          "ci95": [
+            0.34574074074074074,
+            0.5828163580246913
+          ]
+        }
+      },
+      "quality_available": true
+    },
+    "红|forecast=false": {
+      "side": "红",
+      "forecast_context_enabled": false,
+      "n": 144,
+      "parse_rate": 1.0,
+      "runtime_delivery_rate": 1.0,
+      "raw_parsed": 139,
+      "raw_parse_rate": 0.9652777777777778,
+      "legal_rate_conditional_on_parse": 1.0,
+      "contract_repair_rate": 0.034722222222222224,
+      "unrecoverable_rows": 0,
+      "visible_rows_validated": 144,
+      "expected_global_mode_counts": {
+        "进攻": 92,
+        "防守": 37,
+        "均衡": 15
+      },
+      "semantic_mode_coverage_pass": true,
+      "hdq_by_expected_global_mode": {
+        "进攻": {
+          "n_games": 12,
+          "ci95": [
+            0.013625841750841762,
+            0.31351851851851853
+          ],
+          "sample_size_pass": true,
+          "positive_delta_pass": true
+        },
+        "防守": {
+          "n_games": 9,
+          "ci95": [
+            -0.3694444444444444,
+            -0.04622222222222221
+          ],
+          "sample_size_pass": false,
+          "positive_delta_pass": false
+        },
+        "均衡": {
+          "n_games": 7,
+          "ci95": [
+            -0.18071428571428574,
+            0.10321428571428572
+          ],
+          "sample_size_pass": false,
+          "positive_delta_pass": false
+        }
+      },
+      "semantic_mode_hdq_pass": false,
+      "strict_generation_pass": false,
+      "repair_budget_pass": true,
+      "structural_pass": true,
+      "end_to_end_hdq": {
+        "n_games": 12,
+        "mean": 0.5521180555555555,
+        "ci95": [
+          0.48128472222222224,
+          0.628454861111111
+        ]
+      },
+      "end_to_end_hdq_delta_vs_legacy_rule": {
+        "n_games": 12,
+        "mean": -0.028315972222222218,
+        "ci95": [
+          -0.09390624999999998,
+          0.03855902777777778
+        ]
+      },
+      "response_proxy": {
+        "response_score": {
+          "n_games": 12,
+          "mean": 0.5593372851895579,
+          "ci95": [
+            0.5127883269928725,
+            0.6039470735493463
+          ]
+        },
+        "response_movement": {
+          "n_games": 12,
+          "mean": 0.5474747474747474,
+          "ci95": [
+            0.49646464646464644,
+            0.5996212121212121
+          ]
+        },
+        "response_fire": {
+          "n_games": 12,
+          "mean": 0.5426388888888889,
+          "ci95": [
+            0.4793981481481482,
+            0.6002006172839506
+          ]
+        }
+      },
+      "quality_available": true
+    },
+    "蓝|forecast=true": {
+      "side": "蓝",
+      "forecast_context_enabled": true,
+      "n": 144,
+      "parse_rate": 1.0,
+      "runtime_delivery_rate": 1.0,
+      "raw_parsed": 138,
+      "raw_parse_rate": 0.9583333333333334,
+      "legal_rate_conditional_on_parse": 1.0,
+      "contract_repair_rate": 0.041666666666666664,
+      "unrecoverable_rows": 0,
+      "visible_rows_validated": 144,
+      "expected_global_mode_counts": {
+        "进攻": 36,
+        "防守": 94,
+        "均衡": 14
+      },
+      "semantic_mode_coverage_pass": true,
+      "hdq_by_expected_global_mode": {
+        "进攻": {
+          "n_games": 9,
+          "ci95": [
+            -0.0711111111111111,
+            0.2388703703703704
+          ],
+          "sample_size_pass": false,
+          "positive_delta_pass": false
+        },
+        "防守": {
+          "n_games": 12,
+          "ci95": [
+            -0.12261111111111112,
+            0.33569328703703705
+          ],
+          "sample_size_pass": true,
+          "positive_delta_pass": false
+        },
+        "均衡": {
+          "n_games": 7,
+          "ci95": [
+            -0.2673809523809524,
+            0.16499999999999998
+          ],
+          "sample_size_pass": false,
+          "positive_delta_pass": false
+        }
+      },
+      "semantic_mode_hdq_pass": false,
+      "strict_generation_pass": false,
+      "repair_budget_pass": true,
+      "structural_pass": true,
+      "end_to_end_hdq": {
+        "n_games": 12,
+        "mean": 0.64953125,
+        "ci95": [
+          0.5751388888888889,
+          0.7200520833333334
+        ]
+      },
+      "end_to_end_hdq_delta_vs_legacy_rule": {
+        "n_games": 12,
+        "mean": 0.20932291666666666,
+        "ci95": [
+          0.09954861111111112,
+          0.3223611111111111
+        ]
+      },
+      "response_proxy": {
+        "response_score": {
+          "n_games": 12,
+          "mean": 0.5233469707901527,
+          "ci95": [
+            0.48281120184529275,
+            0.5597798876207968
+          ]
+        },
+        "response_movement": {
+          "n_games": 12,
+          "mean": 0.5275252525252525,
+          "ci95": [
+            0.48775252525252527,
+            0.5609848484848485
+          ]
+        },
+        "response_fire": {
+          "n_games": 12,
+          "mean": 0.42603395061728394,
+          "ci95": [
+            0.3363734567901235,
+            0.5119135802469136
+          ]
+        }
+      },
+      "quality_available": true
+    },
+    "蓝|forecast=false": {
+      "side": "蓝",
+      "forecast_context_enabled": false,
+      "n": 144,
+      "parse_rate": 1.0,
+      "runtime_delivery_rate": 1.0,
+      "raw_parsed": 141,
+      "raw_parse_rate": 0.9791666666666666,
+      "legal_rate_conditional_on_parse": 1.0,
+      "contract_repair_rate": 0.020833333333333332,
+      "unrecoverable_rows": 0,
+      "visible_rows_validated": 144,
+      "expected_global_mode_counts": {
+        "进攻": 36,
+        "防守": 94,
+        "均衡": 14
+      },
+      "semantic_mode_coverage_pass": true,
+      "hdq_by_expected_global_mode": {
+        "进攻": {
+          "n_games": 9,
+          "ci95": [
+            -0.06979166666666667,
+            0.21488888888888888
+          ],
+          "sample_size_pass": false,
+          "positive_delta_pass": false
+        },
+        "防守": {
+          "n_games": 12,
+          "ci95": [
+            -0.19466198442760943,
+            0.27978125000000004
+          ],
+          "sample_size_pass": true,
+          "positive_delta_pass": false
+        },
+        "均衡": {
+          "n_games": 7,
+          "ci95": [
+            -0.2280952380952381,
+            0.1888095238095238
+          ],
+          "sample_size_pass": false,
+          "positive_delta_pass": false
+        }
+      },
+      "semantic_mode_hdq_pass": false,
+      "strict_generation_pass": false,
+      "repair_budget_pass": true,
+      "structural_pass": true,
+      "end_to_end_hdq": {
+        "n_games": 12,
+        "mean": 0.6219444444444444,
+        "ci95": [
+          0.5382465277777778,
+          0.70296875
+        ]
+      },
+      "end_to_end_hdq_delta_vs_legacy_rule": {
+        "n_games": 12,
+        "mean": 0.18173611111111113,
+        "ci95": [
+          0.05824652777777778,
+          0.3154166666666667
+        ]
+      },
+      "response_proxy": {
+        "response_score": {
+          "n_games": 12,
+          "mean": 0.5389390386549477,
+          "ci95": [
+            0.495494856574402,
+            0.5917370403165857
+          ]
+        },
+        "response_movement": {
+          "n_games": 12,
+          "mean": 0.5455808080808081,
+          "ci95": [
+            0.5087121212121212,
+            0.5931818181818181
+          ]
+        },
+        "response_fire": {
+          "n_games": 12,
+          "mean": 0.46935185185185185,
+          "ci95": [
+            0.3815432098765432,
+            0.5552006172839506
+          ]
+        }
+      },
+      "quality_available": true
+    }
+  },
+  "missing_scenarios": [],
+  "gates": {
+    "structural_reliability": "fail",
+    "strict_generation_reliability": "fail",
+    "semantic_sample_size": "pass",
+    "semantic_mode_coverage": "pass",
+    "semantic_hdq_by_global_mode_vs_legacy_rule": "insufficient",
+    "semantic_hdq_vs_legacy_rule": "insufficient",
+    "causal_policy_value": "unverifiable_without_controller_execution_and_counterfactual_evidence",
+    "shadow_ready": false
+  },
+  "interpretation": [
+    "A scenario must be fully parsed, schema-legal, and visibility-validated.",
+    "Runtime delivery may use only the narrow contract repair path; each scenario must stay at or below 5% repaired rows.",
+    "Strict raw-generation reliability is reported separately and never hidden by repair.",
+    "Each scenario must contain at least 12 look-ahead labels for every global mode before semantic promotion.",
+    "Every global-mode slice must cover at least 12 games and have a positive 95% CI lower bound for HDQ delta.",
+    "End-to-end HDQ assigns zero to invalid output before comparison with Tier 0.",
+    "HDQ is a look-ahead operational-label metric, not a causal policy-value claim.",
+    "Shadow readiness does not authorize active policy deployment."
+  ]
+}

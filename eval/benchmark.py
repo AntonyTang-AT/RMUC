@@ -144,7 +144,8 @@ def _side_metric_summary(scores_by_game, metric, n_bootstrap, seed):
 
 
 def evaluate_forecast_ledger(predictions, truth_by_key, expected_keys, now,
-                             n_bootstrap=2000, seed=0, model_versions=None):
+                             n_bootstrap=2000, seed=0, model_versions=None,
+                             unavailable_keys_by_model=None):
     """Score matured archived forecasts against already-built exact-time targets.
 
     ``truth_by_key`` contains only uncensored outcomes keyed by ``forecast_key``.
@@ -199,6 +200,7 @@ def evaluate_forecast_ledger(predictions, truth_by_key, expected_keys, now,
     unexpected_by_model = Counter()
     duplicate_by_model = Counter()
     missing_by_model = Counter()
+    unavailable_by_model = Counter()
     invalid_records = []
     for row in predictions:
         if not isinstance(row, dict) or '_ledger_error' in row:
@@ -248,7 +250,11 @@ def evaluate_forecast_ledger(predictions, truth_by_key, expected_keys, now,
     for model in sorted(models):
         scored = 0
         unmatched_truth = len(censored)
+        unavailable = set((unavailable_keys_by_model or {}).get(model, ()))
         for key in scorable_expected:
+            if key in unavailable:
+                unavailable_by_model[model] += 1
+                continue
             candidates = records_by_model_key.get((model, key), [])
             if not candidates:
                 if (model, key) not in seen_by_model_key:
@@ -279,20 +285,28 @@ def evaluate_forecast_ledger(predictions, truth_by_key, expected_keys, now,
             'expected_count': len(scorable_expected),
             'scored_count': scored,
             'missing_count': missing_by_model[model],
+            'unavailable_count': unavailable_by_model[model],
             'duplicate_count': duplicate_by_model[model],
             'unexpected_count': unexpected_by_model[model],
             'invalid_count': (invalid_by_model[model] + duplicate_by_model[model]
                               + unexpected_by_model[model] + missing_by_model[model]),
             'immature_count': immature_by_model[model],
             'target_unavailable_count': unmatched_truth,
-            'missing_rate': (missing_by_model[model] / len(scorable_expected)
+            'missing_rate': (missing_by_model[model] /
+                             max(1, len(scorable_expected) - unavailable_by_model[model])
                              if scorable_expected else 0.0),
         }
         expected_groups = defaultdict(lambda: {'红': [], '蓝': []})
         for key in active_expected:
+            if key in unavailable:
+                continue
             expected_groups[(key[0], key[2], key[3], key[4])][key[1]].append(key)
         complete_groups = [sides for sides in expected_groups.values()
                            if sides['红'] and sides['蓝']]
+        model_counts[model]['red_blue_group_count'] = len(complete_groups)
+        model_counts[model]['active_group_count'] = len(expected_groups)
+        model_counts[model]['red_blue_pair_coverage_rate'] = (
+            len(complete_groups) / len(expected_groups) if expected_groups else 0.0)
         model_counts[model]['red_blue_complete'] = bool(complete_groups) and all(
             all(key in scored_by_model_key[model]
                 for side in ('红', '蓝') for key in sides[side] if key in scorable_expected)
@@ -314,7 +328,12 @@ def evaluate_forecast_ledger(predictions, truth_by_key, expected_keys, now,
             if reliability['confidence'] else []
         )
 
-    total_model_slots = len(scorable_expected) * len(models)
+    total_model_slots = (len(scorable_expected) * len(models) -
+                         sum(unavailable_by_model.values()))
+    # A key is one game/side/time/horizon/task target.  The same key is
+    # evaluated once per model, so summing model scored counts double-counts
+    # the observations whenever a baseline is included alongside a model.
+    unique_scored_keys = set().union(*(scored_by_model_key[m] for m in models)) if models else set()
     total_missing = sum(missing_by_model.values())
     total_invalid = (len(invalid_records) + sum(duplicate_by_model.values())
                      + sum(unexpected_by_model.values()) + total_missing)
@@ -325,18 +344,37 @@ def evaluate_forecast_ledger(predictions, truth_by_key, expected_keys, now,
         'expected_count': len(active_expected),
         'scorable_expected_count': len(scorable_expected),
         'immature_expected_count': len(immature_expected),
-        'scored_count': sum(counts['scored_count'] for counts in model_counts.values()),
+        'scored_count': len(unique_scored_keys),
+        'scored_count_by_model': {
+            model: counts['scored_count'] for model, counts in model_counts.items()
+        },
+        'model_slot_count': sum(counts['scored_count'] for counts in model_counts.values()),
+        'unique_scored_key_count': len(unique_scored_keys),
         'invalid_count': total_invalid,
         'invalid_records': invalid_records,
         'duplicate_count': sum(duplicate_by_model.values()),
         'unexpected_count': sum(unexpected_by_model.values()),
         'missing_count': total_missing,
         'missing_rate': total_missing / total_model_slots if total_model_slots else 0.0,
+        'unavailable_count': sum(unavailable_by_model.values()),
+        'unavailable_count_by_model': dict(unavailable_by_model),
         'immature_count': sum(immature_by_model.values()),
         'target_unavailable_count': len(censored),
         'red_blue_complete': bool(model_counts) and all(
             counts['red_blue_complete'] for counts in model_counts.values()
         ),
+        'red_blue_group_count_by_model': {
+            model: counts.get('red_blue_group_count', 0)
+            for model, counts in model_counts.items()
+        },
+        'active_group_count_by_model': {
+            model: counts.get('active_group_count', 0)
+            for model, counts in model_counts.items()
+        },
+        'red_blue_pair_coverage_by_model': {
+            model: counts.get('red_blue_pair_coverage_rate', 0.0)
+            for model, counts in model_counts.items()
+        },
         'models': model_reports,
     }
 

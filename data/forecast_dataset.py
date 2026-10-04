@@ -35,7 +35,8 @@ def _target_entity(row):
     }
 
 
-def build_game_forecast_examples(rows, game_id, *, horizons=(10, 30, 60, 120), step=3):
+def build_game_forecast_examples(rows, game_id, *, horizons=(10, 30, 60, 120), step=3,
+                                return_snapshots=False):
     """Build causal three-second issue points and exact future truth labels.
 
     Returns red and blue views separately. Hidden enemy measurements are
@@ -43,7 +44,8 @@ def build_game_forecast_examples(rows, game_id, *, horizons=(10, 30, 60, 120), s
     """
     rows = list(rows)
     if not rows:
-        return {'红': [], '蓝': []}
+        empty = {'红': [], '蓝': []}
+        return (empty, empty) if return_snapshots else empty
     if isinstance(step, bool) or not isinstance(step, (int, float)) or not isfinite(step) or step <= 0:
         raise ValueError('step must be a positive finite number')
     if any(_read(row, 'game_id') != game_id for row in rows):
@@ -53,11 +55,23 @@ def build_game_forecast_examples(rows, game_id, *, horizons=(10, 30, 60, 120), s
         by_time[float(_read(row, '时刻秒'))].append(row)
 
     truth_by_time = {}
-    for timestamp, state_rows in by_time.items():
+    previous_ammo = {}
+    for timestamp in sorted(by_time):
+        state_rows = by_time[timestamp]
         entities = {}
         teams = {}
         for row in state_rows:
             entity = _target_entity(row)
+            ammo_values = [entity.get('ammo17'), entity.get('ammo42')]
+            if any(value is not None for value in ammo_values):
+                key = entity['entity_id']
+                previous = previous_ammo.get(key)
+                if previous is not None:
+                    entity['ammo_delta'] = round(sum(
+                        max(0.0, float(cur or 0.0) - float(old or 0.0))
+                        for cur, old in zip(ammo_values, previous)), 4)
+                    entity['firing_inferred'] = bool(entity['ammo_delta'] > 0.0)
+                previous_ammo[key] = ammo_values
             entities[entity['entity_id']] = entity
             teams.setdefault(entity['team'], {
                 'coins_total': float(_read(row, '队伍总金币') or 0.0),
@@ -78,10 +92,14 @@ def build_game_forecast_examples(rows, game_id, *, horizons=(10, 30, 60, 120), s
                       - round((snapshot['issued_at'] - origin) / step)) <= 1e-9]
         for side, side_snapshots in snapshots.items()
     }
-    return {
+    examples = {
         side: build_side_examples(game_id, selected[side], truth_by_time, side, horizons)
         for side in ('红', '蓝')
     }
+    # Replay generation also needs the exact same radar snapshots for its
+    # one-second frames. Return the already computed values on request so it
+    # does not query the match and rebuild visibility a second time.
+    return (examples, snapshots) if return_snapshots else examples
 
 
 def dataset_metadata():
@@ -90,6 +108,11 @@ def dataset_metadata():
         'visibility_provider': PROVIDER_ID,
         'visibility_semantics': 'RMUC 2026 radar protocol fields from replay; opponent robot type/XY/HP/team coins/highlighted state; zero-zero XY means unsent',
         'unsupported_opponent_fields': ['z', 'yaw', 'power', 'heat', 'cumulative_ammo', 'maxhp', 'drone_hp', 'buildings'],
+        'self_sensor_fields': [
+            'position_xyz', 'hp', 'maxhp', 'yaw', 'power', 'heat',
+            'cumulative_ammo', 'team_coins_total', 'team_coins_left',
+            'ammo_delta', 'firing_inferred',
+        ],
         'unavailable_protocol_fields': ['remaining_projectile_allowance', 'full_buff_packet'],
         'time_resolution_seconds': 1.0,
         'issue_step_seconds': 3.0,
@@ -98,4 +121,16 @@ def dataset_metadata():
         'sides': ['红', '蓝'],
         'horizons_seconds': [10, 30, 60, 120],
         'global_replay_fields': 'targets only; never copied into observable input',
+        'target_observability_policy': {
+            'forecastable_fields': ['future_position_xy', 'future_hp', 'future_presence', 'future_count'],
+            'specialized_hidden_fields': ['enemy_firing', 'enemy_target_id',
+                                          'enemy_energy_unit', 'enemy_height',
+                                          'enemy_power', 'enemy_heat'],
+            'handling': 'hidden fields are excluded from supervised heads and remain unknown in runtime sidecars',
+        },
+        'trajectory_presence_policy': {
+            'explicit_robot_hp_zero': 'future presence=0; do not train or score a destroyed robot as stationary/alive',
+            'missing_opponent_hp': 'remain unknown and retain radar visibility semantics; absence alone is not death',
+            'respawn': 'a later positive-HP observation restores the robot to active prediction',
+        },
     }

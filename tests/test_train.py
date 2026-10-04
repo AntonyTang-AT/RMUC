@@ -74,3 +74,27 @@ def test_rollout_trace_carries_old_log_prob():
     for step in trace:
         assert len(step) == 7                      # (ag, obs, act, rew, next, done, old_lp)
         assert np.isfinite(float(step[6]))
+
+
+def test_train_and_rollout_restore_grad_enabled_state():
+    """训练和推理不得泄漏调用方的全局 autograd 开关。"""
+    ppo = tr.IPPO(obs_dim=8)
+    original = torch.is_grad_enabled()
+    try:
+        torch.set_grad_enabled(False)
+        ppo.train(_TinyEnv(), n_updates=1)
+        assert torch.is_grad_enabled() is False
+
+        torch.set_grad_enabled(True)
+        ppo.train(_TinyEnv(), n_updates=1)
+        assert torch.is_grad_enabled() is True
+
+        torch.set_grad_enabled(False)
+        ppo.rollout_actions([None], {}, env=_TinyEnv())
+        assert torch.is_grad_enabled() is False
+
+        torch.set_grad_enabled(True)
+        ppo.rollout_actions([None], {}, env=_TinyEnv())
+        assert torch.is_grad_enabled() is True
+    finally:
+        torch.set_grad_enabled(original)

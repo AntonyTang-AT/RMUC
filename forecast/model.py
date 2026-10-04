@@ -7,6 +7,8 @@ from torch import nn
 
 from .temporal import FEATURE_DIM, HORIZONS, MODES, REGION_LABELS, TRENDS
 from .entity import ENTITY_SLOTS, ENTITY_TARGET_DIM
+from worldstate.functional_zone import FUNCTIONAL_ZONE_LABELS
+from worldstate.canonical_zone import CANONICAL_ZONE_DIM
 
 
 # Near forecasts preserve high-frequency snapshots; distant forecasts use
@@ -19,12 +21,14 @@ class TemporalForecastNet(nn.Module):
     """Shared GRU encoder with typed heads for every forecast horizon."""
 
     def __init__(self, input_dim=FEATURE_DIM, hidden=128, layers=2,
-                 entity_slots=0):
+                 entity_slots=0, zone_classes=0, canonical_zone_classes=0):
         super().__init__()
         self.input_dim = int(input_dim)
         self.hidden = int(hidden)
         self.layers = int(layers)
         self.entity_slots = int(entity_slots)
+        self.zone_classes = int(zone_classes)
+        self.canonical_zone_classes = int(canonical_zone_classes)
         self.input_proj = nn.Sequential(
             nn.Linear(self.input_dim, self.hidden), nn.LayerNorm(self.hidden), nn.GELU()
         )
@@ -47,6 +51,24 @@ class TemporalForecastNet(nn.Module):
             })
         else:
             self.entity_heads = nn.ModuleDict()
+        if self.zone_classes:
+            if self.zone_classes != len(FUNCTIONAL_ZONE_LABELS):
+                raise ValueError(f"zone_classes must be {len(FUNCTIONAL_ZONE_LABELS)}")
+            self.entity_zone_heads = nn.ModuleDict({
+                str(h): nn.Linear(self.hidden, self.entity_slots * self.zone_classes)
+                for h in HORIZONS
+            })
+        else:
+            self.entity_zone_heads = nn.ModuleDict()
+        if self.canonical_zone_classes:
+            if self.canonical_zone_classes != CANONICAL_ZONE_DIM:
+                raise ValueError(f"canonical_zone_classes must be {CANONICAL_ZONE_DIM}")
+            self.entity_canonical_zone_heads = nn.ModuleDict({
+                str(h): nn.Linear(self.hidden, self.entity_slots * self.canonical_zone_classes)
+                for h in HORIZONS
+            })
+        else:
+            self.entity_canonical_zone_heads = nn.ModuleDict()
 
     def forward(self, x):
         if x.ndim != 3 or x.shape[-1] != self.input_dim:
@@ -72,4 +94,10 @@ class TemporalForecastNet(nn.Module):
             if self.entity_slots:
                 outputs[horizon]["entity_state"] = self.entity_heads[str(horizon)](pooled).reshape(
                     x.shape[0], self.entity_slots, ENTITY_TARGET_DIM)
+                if self.zone_classes:
+                    outputs[horizon]["entity_zone_state"] = self.entity_zone_heads[str(horizon)](pooled).reshape(
+                        x.shape[0], self.entity_slots, self.zone_classes)
+                if self.canonical_zone_classes:
+                    outputs[horizon]["entity_canonical_zone_state"] = self.entity_canonical_zone_heads[str(horizon)](pooled).reshape(
+                        x.shape[0], self.entity_slots, self.canonical_zone_classes)
         return outputs

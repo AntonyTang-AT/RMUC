@@ -1,0 +1,8 @@
+{
+  "source": "C:\\Users\\AntonyTang\\.codex\\generated_images\\01a0d26c-e553-7562-9bc2-455ceecdbfaa\\exec-07adcd39-df35-45e0-a484-fc13eb5ea667.png",
+  "output": "F:\\Desktop\\学校\\rm考核项目\\out_m2\\official\\zone_lines_repaired_center_symmetric.png",
+  "repair": "7x7 gap closure + upper-half 180-degree reconstruction",
+  "red_blue_mismatch_pixels": 0,
+  "blue_red_mismatch_pixels": 0,
+  "purple_mismatch_pixels": 0
+}

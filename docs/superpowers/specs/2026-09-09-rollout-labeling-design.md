@@ -40,15 +40,15 @@ M2 训练数据的状态(`global_mode` + 六单位动作)目前来自**瞬时逐
       推演帧数 T; 单点胜率机 win_proba(feats)
 
 对 m in M:
-  e_m    = enemy_best_response(m)       # 敌方对我方提交模式 m 的最优应对(模式级, 窗口内固定)
+  e_m    = enemy_best_response(m)       # 敌方对我方提交模式 m 的对抗应对(最小化我方 payoff;模式级, 窗口内固定)
   live   = copy(dp_t['robots'])         # 物理态(保留 maxhp/power/... )
   traj   = [w_t]
   for step in range(T):
       w_now = worldstate_from_live(live, bounds)                                   # 当前局面
       my_act = { cls: derive_unit_intent(my_unit_cls, w_now, m)     for cls in 红方六单位类 }  # 我方按模式 m 逐帧派生
       en_act = { cls: derive_unit_intent(enemy_unit_cls, w_now, e_m) for cls in 蓝方六单位类 }  # 敌方按 e_m 逐帧派生
-      live   = step_robots(live, team,       phys(my_act), dt, params)             # 我方行动
-      live   = step_robots(live, enemy_team, phys(en_act), dt, params)             # 敌方行动
+      live   = step_robots(live, team,       phys(my_act), dt, params, enemy_fire=False)  # 我方行动(关返回敌火,R-E6)
+      live   = step_robots(live, enemy_team, phys(en_act), dt, params, enemy_fire=False)  # 敌方行动(关返回敌火,R-E6)
       traj.append(worldstate_from_live(live, bounds))
   score_m = win_proba( window_features(traj, team) )                              # 单点胜率机评分
 
@@ -65,8 +65,9 @@ M2 训练数据的状态(`global_mode` + 六单位动作)目前来自**瞬时逐
 ### 4.1 复用(不改)
 - `tree/global_mode.derive_unit_intent(unit, worldstate, global_mode) -> {'target','move','fire','risk'}`
   - 纯函数,由 unit 的 `hp_ratio/vuln/dfire/norm_xy` + mode 唯一决定,确定性无 seed。
-- `rl/physics.step_robots(robots, team, actions, dt, P=None) -> robots`
+- `rl/physics.step_robots(robots, team, actions, dt, P=None, enemy_fire=True) -> robots`
   - `actions={cls:{'move','fire'}}`;**只推演 `team` 侧单位**,敌方单位不移动、仅半径内开火。通过"我方一次、敌方一次"两次调用实现敌我双方活动。
+  - **`enemy_fire` 参数(修正轮 R-E6)**:`step_robots` 末尾恒跑 `_enemy_fire`,故"我方+敌方"两次调用会在射程内让**双方各被开火两次**(自身 action-fire + 对方视角敌火 → 双算伤害),污染 rollout→胜率机→标签。为消除双算,`rollout_once` 的**两次调用均传 `enemy_fire=False`**:每侧每帧只经自身 action-fire 开火一次。默认 `enemy_fire=True` 使 PhysicsEnv 单次调用行为不变(既有物理测试原样通过)。
 - `game/game_theory.best_response(matrix, opp_strategy) -> idx`, `PAYOFF_3`。
 - `worldstate.worldstate.build_worldstate(dp, bounds)`(用 live 重建,依赖保留的 `maxhp` 等)。
 
@@ -75,13 +76,11 @@ M2 训练数据的状态(`global_mode` + 六单位动作)目前来自**瞬时逐
 
 - `enemy_best_response(our_mode, matrix=PAYOFF_3) -> mode`
   ```python
-  import numpy as np
   i = GLOBAL_MODES.index(our_mode)
-  onehot = [1.0 if k == i else 0.0 for k in range(3)]
-  enemy = best_response(np.array(matrix).T, onehot)   # 矩阵转置 + 我方 one-hot
-  return GLOBAL_MODES[enemy]
+  row_i = matrix[i]                         # 我方提交 i 时,随敌取 j 而变的 payoff
+  return GLOBAL_MODES[min(range(3), key=lambda j: row_i[j])]
   ```
-  **语义**:敌方视我提交的纯策略,取自己 Payoff 最高的应对模式。
+  **语义(修正轮 R-E7-对抗)**:敌方视我提交的**纯策略**,取**使我方 payoff 最小**的应对模式——因为我方在 n 行,敌取 j 造成我方 payoff=PAYOFF_3[i][j],敌方欲最大化其自身收益即**最小化我方 PAYOFF_3[i][j]** ⇒ `argmin`。纯策略(非混合)的上限见 §10;此修正把标签从"乐观承诺(合作)"扳回"最优承诺(对抗)"。
 - `commit_actions(worldstate, mode, team) -> {cls: {'move','fire'}}` — 遍历 team 六单位类,`derive_unit_intent` 后取 move/fire。
 - `rollout_once(worldstate0, dp0, bounds, my_mode, enemy_team, T, dt, params) -> [w0..wT]` — 初始 `live=copy(dp0['robots'])`;`e_m = enemy_best_response(my_mode)`;每帧:由 `worldstate_from_live` 得 `w_now`,再 `derive_unit_intent` 派生我方(`my_mode`)/敌方(`e_m`)动作,分两次 `step_robots`,追加重建 worldstate。返回轨迹序列。
 - `relabel_rollout(ws_list, dps, bounds, T, team='红', ...) -> (rollout_decisions, labels, scores)`

@@ -1,0 +1,68 @@
+{
+  "schema_version": "evidence-lineage-v1",
+  "generated_at_utc": "2026-09-29T02:04:29.851103+00:00",
+  "training_state": "not_inferred_from_static_artifacts",
+  "entries": [
+    {
+      "path": "F:\\Desktop\\学校\\rm考核项目\\out_m2\\production_ensemble_eval\\report_current_transition10.json",
+      "role": "authoritative_unified_forecast_report",
+      "status": "authoritative",
+      "reason": "Locked-test report for the exact evaluated runtime route.",
+      "size_bytes": 64352,
+      "modified_at_utc": "2026-09-29T01:51:41.217773+00:00",
+      "sha256": "591d2c3e899e9ccec175bc7861e0ce467ab6a723446b6f1f66816dde05ac1fb1"
+    },
+    {
+      "path": "F:\\Desktop\\学校\\rm考核项目\\out_m2\\production_ensemble_eval\\production_summary_current_transition10.json",
+      "role": "selected_production_summary",
+      "status": "current",
+      "reason": "Summary aligned to the selected unified report.",
+      "size_bytes": 46855,
+      "modified_at_utc": "2026-09-29T01:52:05.482181+00:00",
+      "sha256": "0ab670acf3fb641c4f8ca4966e00e232ba5a2d69760e03c30438661065bc4635"
+    },
+    {
+      "path": "F:\\Desktop\\学校\\rm考核项目\\out_m2\\enemy_region_transition\\production_manifest_10.json",
+      "role": "standalone_enemy_region_10s_sidecar",
+      "status": "included_in_unified_report",
+      "reason": "Provenance for the selected unified report.",
+      "size_bytes": 91017,
+      "modified_at_utc": "2026-09-28T08:09:09.950472+00:00",
+      "sha256": "c8e0985d1b45deb522206244a16e1b0855c10dba77b7f16b709b14b2741f700a"
+    },
+    {
+      "path": "F:\\Desktop\\学校\\rm考核项目\\out_m2\\deployment_readiness_audit_current.json",
+      "role": "deployment_readiness_matrix",
+      "status": "authoritative",
+      "reason": "Static gate summary; it does not rerun models.",
+      "size_bytes": 28242,
+      "modified_at_utc": "2026-09-29T01:52:05.558227+00:00",
+      "sha256": "e8b0454d25ea84ec0dd4c794826ffd9cbc0851c88ec6e24c611e4cb1a518b930"
+    },
+    {
+      "path": "F:\\Desktop\\学校\\rm考核项目\\out_m2\\decision_metric_validity_audit.json",
+      "role": "decision_metric_validity_audit",
+      "status": "authoritative",
+      "reason": "Holdout coverage and label-stability evidence for HDQ.",
+      "size_bytes": 1836,
+      "modified_at_utc": "2026-09-29T01:02:25.893800+00:00",
+      "sha256": "c9b019f7b8ec051f33e96729a776be901275a094fbb85de07287865f7bb56526"
+    },
+    {
+      "path": "F:\\Desktop\\学校\\rm考核项目\\out_m2\\temporal_visible_context_dataset_v4_run1\\training_dataset_audit_current.json",
+      "role": "llm_training_dataset_audit",
+      "status": "authoritative",
+      "reason": "Visible-context completions, paired variants, and holdout isolation passed.",
+      "size_bytes": 678,
+      "modified_at_utc": "2026-09-29T01:59:00.540753+00:00",
+      "sha256": "6170386f8e28c45ad3dcb3e36601b0f65d7ca18cba55b2dc82b43e68ccb35bb6"
+    }
+  ],
+  "selection_policy": {
+    "forecast_metrics": "authoritative_unified_forecast_report",
+    "deployment_gate": "deployment_readiness_matrix",
+    "decision_metric_validity": "decision_metric_validity_audit",
+    "llm_training_data": "llm_training_dataset_audit",
+    "sidecar_promotion": "included_in_unified_report"
+  }
+}

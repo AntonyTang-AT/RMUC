@@ -29,7 +29,8 @@ N_AGENT = len(AGENTS)  # 6
 class M2Env:
     """多单位全队 MARL 环境。dps 为 features.build_decision_points 的决策点序列。"""
 
-    def __init__(self, decision_points, bounds, team='红', vis_radius=8.0, reward_conf=None):
+    def __init__(self, decision_points, bounds, team='红', vis_radius=8.0, reward_conf=None,
+                 coherence_scale=1.0, reward_delta=False, fav_align_scale=0.0):
         self.dps = decision_points
         self.bounds = bounds
         self.team = team
@@ -37,8 +38,15 @@ class M2Env:
         self.t = 0
         self.vis_radius = vis_radius                 # 哨兵感知半径(米); 敌方在此半径外=不可见
         self.reward_conf = reward_conf or rw.DEFAULT_CONF
+        # coherence 权重: 1.0=原行为; Track2 用 <1 避免淹没物理/进展奖励导致常数策略
+        self.coherence_scale = float(coherence_scale)
+        # True: 进展项用 R(t)-R(t-1)(势能差分); False: 旧行为绝对势能(易淹没动作信号)
+        self.reward_delta = bool(reward_delta)
+        # 轻量 fav–攻击度对齐(默认关; Track2 ~0.08): 远小于终局/差分主奖励
+        self.fav_align_scale = float(fav_align_scale)
         # 预构建 worldstate(每决策点), 供 step 直接取值, 避免反复 build
         self.ws = [ws.build_worldstate(dp, bounds) for dp in decision_points]
+        self._fav_median = self._compute_fav_median(self.ws)
         self.obs_dim = self._obs_dim()
         self.action_meanings = ACTION_MEANINGS
         self.n_actions = len(ACTION_MEANINGS)
@@ -142,6 +150,39 @@ class M2Env:
         """对局结果接地五组组件加权(攻击/防守/自身/经济); 权重默认 DEFAULT_CONF, 可被学习权重替换。"""
         return rw.compute_reward(w, self.reward_conf, self.team)
 
+    def _compute_fav_median(self, ws_list):
+        """轨迹 fav 中位数, 供 fav_align_bonus 高低二分(与 eval 中位数口径同向)。"""
+        if not ws_list:
+            return 0.0
+        from eval.outcome_backtest import fav_from_worldstate
+        favs = [fav_from_worldstate(w, self.team) for w in ws_list]
+        return float(np.median(favs)) if favs else 0.0
+
+    def _fav_align_bonus(self, actions, w):
+        """高 fav 偏好推进、低 fav 偏好回防; scale=0 时恒 0。"""
+        if self.fav_align_scale <= 0.0:
+            return 0.0
+        from eval.outcome_backtest import fav_from_worldstate
+        fav = fav_from_worldstate(w, self.team)
+        high = fav >= self._fav_median
+        score = 0.0
+        for cls, a in actions.items():
+            move, _fire = ACTION_MEANINGS[int(a) % len(ACTION_MEANINGS)]
+            fe = self._class_feat(w, cls, self.team)
+            if fe[0] <= 0.0:
+                continue
+            if high:
+                if move == '推进':
+                    score += 1.0
+                elif move == '回防':
+                    score -= 0.5
+            else:
+                if move == '回防':
+                    score += 1.0
+                elif move == '推进':
+                    score -= 0.5
+        return self.fav_align_scale * score
+
     # 局势描述: 供动作一致性 reward 使用(与规则头同一信号, 但作用在动作上)
     def _situation(self, w):
         from tree import global_mode as gm
@@ -167,7 +208,7 @@ class M2Env:
             if hp <= 0.0:
                 score -= 0.5          # 不指挥已损单位
                 continue
-            aggressive = move in ('进攻', '推进')
+            aggressive = move == '推进'  # schema MOVES 无「进攻」; 旧写法含「进攻」导致分支永不触发
             if fire:
                 score += 0.15
             if aggressive:
@@ -177,15 +218,29 @@ class M2Env:
                     score += 0.3      # 大部队推进 -> 进攻合理
             if move == '回防':
                 score += (0.3 if s['enemy_in_half'] else -0.1)
+            # 模式对齐: 打破多数局势下 5 种 move 同分的平局, 否则 argmax 塌到单一常数动作
+            mode = s['mode']
+            if mode == '进攻' and move == '推进':
+                score += 0.25
+            elif mode == '防守' and move == '回防':
+                score += 0.25
+            elif mode == '均衡' and move in ('游击', '坚守'):
+                score += 0.15
+            elif mode == '均衡' and move == '无':
+                score -= 0.05
         return score
 
     def step(self, actions):
         """actions: {cls: action_index(0..11)}。返回 (next_obs_dict, reward, done, trunc, info)。
-        reward = 动作一致性(动作条件梯度) + 下一决策点 RM 进展 + 终端胜负。"""
-        rew = self._action_coherence(actions, self.ws[self.t])  # 动作依赖, 关键信号
+        reward = 动作一致性 + fav对齐(可选) + RM 进展(绝对或差分) + 终端胜负。"""
+        cur = self.ws[self.t]
+        rew = self.coherence_scale * self._action_coherence(actions, cur)
+        rew += self._fav_align_bonus(actions, cur)
         if self.t + 1 < len(self.ws):
+            r0 = self._reward(self.ws[self.t])
             self.t += 1
-            rew += self._reward(self.ws[self.t])
+            r1 = self._reward(self.ws[self.t])
+            rew += (r1 - r0) if self.reward_delta else r1
         done = (self.t >= len(self.ws) - 1)
         trunc = done
         if done:
@@ -216,13 +271,19 @@ class PhysicsEnv(M2Env):
     复用父类 obs/reward/win_condition; 只覆盖 reset/step, 并用自建的模拟轨迹充当 self.ws。"""
 
     def __init__(self, decision_points, bounds, team='红', vis_radius=8.0,
-                 reward_conf=None, params=None, horizon=None):
+                 reward_conf=None, params=None, horizon=None, coherence_scale=1.0,
+                 reward_delta=False, symmetric_fire=True, fav_align_scale=0.0):
         self._sup = super()
-        self._sup.__init__(decision_points, bounds, team, vis_radius, reward_conf)
+        self._sup.__init__(decision_points, bounds, team, vis_radius, reward_conf,
+                           coherence_scale=coherence_scale, reward_delta=reward_delta,
+                           fav_align_scale=fav_align_scale)
         self.dt = config.DF_STEP
         self.params = params or {}
+        # True(默认仿真): 双方各用自身 actions 结算火力一次, 关风格化 return-fire 防双算
+        self.symmetric_fire = bool(symmetric_fire)
         self.horizon = horizon if horizon is not None else len(decision_points) - 1
         # self.ws 由父类预建为真实轨迹; 这里重定向为"模拟轨迹", 首元素=真实 t0, 后面 step 追加。
+        # fav 中位数保留自完整决策点轨迹(父类已算), 不因 ws 截断重置。
         self.ws = [self.ws[0]]
         self.live = self._copy_units(decision_points[0])
 
@@ -296,19 +357,26 @@ class PhysicsEnv(M2Env):
         return self.obs_dict()
 
     def step(self, actions):
-        rew = self._action_coherence(actions, self.ws[self.t])
+        cur = self.ws[self.t]
+        rew = self.coherence_scale * self._action_coherence(actions, cur)
+        rew += self._fav_align_bonus(actions, cur)
         if self.t < self.horizon:
-            w = self.ws[self.t]
+            w = cur
+            r0 = self._reward(w)
             my_act = self._phys_actions(actions)
             en_act = self._enemy_actions(w)
-            # 双方对称: 我敌方各一次 step_robots, 都关返回敌火(避免双算; 敌方已按自身模式行动)
+            # 双方对称推进。symmetric_fire: 各方只结算己方 actions 火力(关风格化 return-fire 防双算);
+            # 关闭时保留旧口径(我方步仍关敌火, 与历史单测一致)。
+            ef_my = False
+            ef_en = False if self.symmetric_fire else False
             self.live = ph.step_robots(self.live, self.team, my_act, self.dt,
-                                       self._phys_params(), enemy_fire=False)
+                                       self._phys_params(), enemy_fire=ef_my)
             self.live = ph.step_robots(self.live, self.enemy_team, en_act, self.dt,
-                                       self._phys_params(), enemy_fire=False)
+                                       self._phys_params(), enemy_fire=ef_en)
             self.t += 1
             self.ws.append(self._worldstate(self.live))
-            rew += self._reward(self.ws[self.t])
+            r1 = self._reward(self.ws[self.t])
+            rew += (r1 - r0) if self.reward_delta else r1
         done = self.t >= self.horizon
         trunc = done
         if done:

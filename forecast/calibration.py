@@ -11,7 +11,8 @@ from __future__ import annotations
 import numpy as np
 
 
-CALIBRATION_VERSION = "monotonic_horizon_v1"
+CALIBRATION_VERSION = "monotonic_horizon_v2_temperature"
+HORIZON_TEMPERATURES = {10: 1.00, 30: 1.08, 60: 1.18, 120: 1.32}
 
 
 def enforce_monotonic_horizon_confidence(probabilities_by_horizon):
@@ -45,3 +46,31 @@ def enforce_monotonic_horizon_confidence(probabilities_by_horizon):
         out[int(horizon)] = values.astype(np.float32).tolist()
     return out
 
+
+def soften_horizon_probabilities(probabilities_by_horizon,
+                                 temperatures=None):
+    """Flatten farther-horizon distributions before monotonic calibration.
+
+    This is a reporting/calibration operation, not a label change: a distant
+    forecast keeps the same classes but expresses its larger set of plausible
+    futures instead of presenting a spurious point certainty.
+    """
+    temperatures = temperatures or HORIZON_TEMPERATURES
+    out = {}
+    for horizon, values in probabilities_by_horizon.items():
+        values = np.asarray(values, dtype=np.float64)
+        values = np.clip(values, 1e-8, 1.0)
+        values /= max(float(values.sum()), 1e-12)
+        temperature = max(1.0, float(temperatures.get(int(horizon), 1.0)))
+        logits = np.log(values) / temperature
+        logits -= float(logits.max())
+        values = np.exp(logits)
+        values /= max(float(values.sum()), 1e-12)
+        out[int(horizon)] = values.astype(np.float32).tolist()
+    return out
+
+
+def calibrate_horizon_probabilities(probabilities_by_horizon):
+    """Apply horizon-aware uncertainty widening and monotonic confidence."""
+    return enforce_monotonic_horizon_confidence(
+        soften_horizon_probabilities(probabilities_by_horizon))

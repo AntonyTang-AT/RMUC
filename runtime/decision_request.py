@@ -30,6 +30,7 @@ def to_decision_request(decision):
         'semantic_situation': d.get('semantic_situation'),
         'global_analysis': d.get('global_analysis'),
         'temporal_forecast': d.get('temporal_forecast'),
+        'forecast_context': (d.get('global_analysis') or {}).get('forecast_context'),
     }
 
 

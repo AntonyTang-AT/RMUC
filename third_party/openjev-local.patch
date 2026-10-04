@@ -1,0 +1,53 @@
+diff --git a/jev/model.py b/jev/model.py
+index 6bb0bb1..964ea43 100644
+--- a/jev/model.py
++++ b/jev/model.py
+@@ -273,10 +273,13 @@ class DecisionModel(nn.Module):
+         return score_cached(self, records, batch_size=batch_size)
+ 
+     @classmethod
+-    def load(cls, output, device="cuda:0"):
++    def load(cls, output, device="cuda:0", base_model=None):
+         output = Path(output)
+         config = json.loads((output / "model.json").read_text())
+-        model = cls(config["model_id"], config["revision"], device=device,
++        # Keep the pinned checkpoint identity while allowing an offline local
++        # copy of the exact base model during evaluation.
++        model_id = str(base_model) if base_model else config["model_id"]
++        model = cls(model_id, config["revision"], device=device,
+                     lora_rank=0, max_length=config["max_length"])
+         if config["lora_rank"]:
+             from peft import PeftModel
+diff --git a/jev/server.py b/jev/server.py
+index 32c27d2..335b029 100644
+--- a/jev/server.py
++++ b/jev/server.py
+@@ -118,6 +118,7 @@ def main():
+     group = parser.add_mutually_exclusive_group(required=True)
+     group.add_argument("--checkpoint")
+     group.add_argument("--model", dest="model_id")
++    parser.add_argument("--base-model", help="Use a local directory for the checkpoint's pinned base model")
+     parser.add_argument("--revision")
+     parser.add_argument("--device", default="cuda:0")
+     parser.add_argument("--max-length", type=int)
+diff --git a/jev/serving.py b/jev/serving.py
+index 0a16e47..31d46cc 100644
+--- a/jev/serving.py
++++ b/jev/serving.py
+@@ -114,13 +114,14 @@ class TorchScorer:
+ 
+ 
+ def load_predictor(*, checkpoint=None, model_id=None, revision=None, device="cuda:0",
+-                   max_length=None, batch_size=32, prefix_cache=False):
++                   max_length=None, batch_size=32, prefix_cache=False,
++                   base_model=None):
+     from .model import DecisionModel
+     if bool(checkpoint) == bool(model_id):
+         raise ValueError("choose exactly one checkpoint or base model")
+     if checkpoint:
+         path = Path(checkpoint)
+-        model = DecisionModel.load(path, device=device)
++        model = DecisionModel.load(path, device=device, base_model=base_model)
+         temperature = json.loads((path / "temperature.json").read_text())["temperature"]
+         method = "lora_decision_head"
+         digest = hashlib.sha256()

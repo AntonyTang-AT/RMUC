@@ -72,6 +72,32 @@ def test_zero_zero_is_treated_as_unsent_enemy_position():
     assert 'position' not in enemy
 
 
+def test_self_sensor_keeps_altitude_and_causal_ammo_delta():
+    rows = [
+        row('红', 1, 10, x=1.0),
+        row('蓝', 2, 10, x=8.0),
+        row('红', 1, 11, x=1.2),
+        row('蓝', 2, 11, x=8.2),
+    ]
+    rows[2]['累计17mm发弹'] = 7.0
+    own = build_radar_visibility_snapshots(rows, game_id=7)['红'][1]['entities']['红:1']
+    assert own['z'] == 0.0
+    assert own['ammo_delta'] == 3.0
+    assert own['firing_inferred'] is True
+
+
+def test_velocity_direction_is_derived_causally_for_both_sides():
+    rows = [
+        row('红', 1, 10, x=1.0, y=2.0), row('蓝', 2, 10, x=8.0, y=2.0),
+        row('红', 1, 11, x=1.5, y=2.0), row('蓝', 2, 11, x=7.5, y=2.0),
+    ]
+    red = build_radar_visibility_snapshots(rows, game_id=7)['红'][1]['entities']
+    assert red['红:1']['velocity_x'] > 0
+    assert red['蓝:2']['velocity_x'] < 0
+    assert red['红:1']['speed_mps'] > 0
+    assert 'yaw' not in red['蓝:2']
+
+
 def test_opponent_drone_hp_is_omitted_because_protocol_reserves_that_slot():
     rows = [row('红', 1, 10), row('蓝', 6, 10, hp=75.0)]
     rows[1]['机器人类型'] = '空中'

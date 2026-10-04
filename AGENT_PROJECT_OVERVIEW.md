@@ -166,9 +166,9 @@ python run_m2.py --profile mainline --stage fusion --skip-rl \
 |---|---|
 | Tier0 | 学生低置信 → 规则 mode + 单位 refill |
 | Tier1 | 学生高置信 → 3 帧平滑 mode + refill |
-| Tier2 | `need_llm` → `tier2_backend.generate_one`；**无 CUDA / `--tier2-adapter none` → NullTier2 规则回退** |
+| Tier2 | `need_llm` → `tier2_backend.generate_visible_one`（仅当前时刻可见雷达/传感器快照）；**无 CUDA / `--tier2-adapter none` → NullTier2 规则回退** |
 
-- Tier2 默认交付 adapter 路径：`out_m2/finetuned_lookahead_7b/adapter`（`runtime/tier2.DEFAULT_ADAPTER`）；本机无卡勿加载。
+- Tier2 默认交付 adapter 路径：`out_m2/finetuned_visible_v5_risk_anchor_fast/adapter`（`runtime/tier2.DEFAULT_ADAPTER`）。`run_m2 --profile mainline` 默认传递 `auto`；有 CUDA 时按路由加载该候选，无 CUDA 或加载失败时自动回退规则路径。当前候选用于结构化接口展示，尚未获得策略质量推广资格。
 - 单点推理：`finetune/infer_one.py`；后端：`runtime/tier2.py`（`NullTier2` / `LazyLoraTier2`）。
 - CLI：`run_m2.py --mode-student ... --tier2-adapter none|auto|<path> --tier2-device auto`
 - 意图驱动单位偏置：`labels/intent_policy.py`（挂在 `refill_units_for_mode(..., opp_intent=)`）。

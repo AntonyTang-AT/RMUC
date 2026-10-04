@@ -1,0 +1,734 @@
+{
+  "schema_version": "deployment-readiness-audit-v1",
+  "forecast": {
+    "unified_report": "out_m2\\production_ensemble_eval\\report_current_transition10.json",
+    "unified_report_time_utc": "2026-09-29T01:51:41.217773+00:00",
+    "older_summary": "out_m2\\production_ensemble_eval\\production_summary_current_transition10.json",
+    "older_summary_time_utc": "2026-09-29T01:52:05.482181+00:00",
+    "older_summary_is_stale": false,
+    "heads": [
+      {
+        "kind": "forecast_head",
+        "task": "global_mode",
+        "horizon_seconds": 10,
+        "evidence": "unified_locked_test_report",
+        "evidence_time_utc": "2026-09-29T01:51:41.217773+00:00",
+        "status": "pass",
+        "accuracy_delta_pp": 0.240014,
+        "macro_f1_delta_pp": 0.20528,
+        "brier_delta": -0.124854268,
+        "strictly_beats_persistence": true,
+        "confidence_status": "directional_only",
+        "paired_game_bootstrap": {
+          "unit_of_resampling": "complete game_id with paired red and blue views",
+          "n_complete_games": 128,
+          "replicates": 2000,
+          "seed": 20260939,
+          "confidence_level": 0.95,
+          "interval_method": "paired_game_percentile_bootstrap",
+          "multiplicity_adjustment": "none_pointwise_intervals",
+          "available": true,
+          "metrics": {
+            "accuracy": {
+              "point_delta_production_minus_persistence": 0.0024001371506943703,
+              "ci95": [
+                -0.0005710125525413293,
+                0.006835573715298899
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": false,
+              "bootstrap_probability_favors_production": 0.94
+            },
+            "macro_f1": {
+              "point_delta_production_minus_persistence": 0.0020527971291671165,
+              "ci95": [
+                -0.0015829882433589474,
+                0.008058930705901315
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": false,
+              "bootstrap_probability_favors_production": 0.7755
+            },
+            "brier": {
+              "point_delta_production_minus_persistence": -0.12485426849806602,
+              "ci95": [
+                -0.14587317936233193,
+                -0.10645173273664303
+              ],
+              "lower_is_better": true,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            }
+          }
+        }
+      },
+      {
+        "kind": "forecast_head",
+        "task": "global_mode",
+        "horizon_seconds": 30,
+        "evidence": "unified_locked_test_report",
+        "evidence_time_utc": "2026-09-29T01:51:41.217773+00:00",
+        "status": "pass",
+        "accuracy_delta_pp": 0.1596,
+        "macro_f1_delta_pp": 0.013724,
+        "brier_delta": -0.228715118,
+        "strictly_beats_persistence": true,
+        "confidence_status": "directional_only",
+        "paired_game_bootstrap": {
+          "unit_of_resampling": "complete game_id with paired red and blue views",
+          "n_complete_games": 128,
+          "replicates": 2000,
+          "seed": 20260959,
+          "confidence_level": 0.95,
+          "interval_method": "paired_game_percentile_bootstrap",
+          "multiplicity_adjustment": "none_pointwise_intervals",
+          "available": true,
+          "metrics": {
+            "accuracy": {
+              "point_delta_production_minus_persistence": 0.001596000963623223,
+              "ci95": [
+                -0.005037722589186525,
+                0.00765663601071225
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": false,
+              "bootstrap_probability_favors_production": 0.6775
+            },
+            "macro_f1": {
+              "point_delta_production_minus_persistence": 0.00013723964457384996,
+              "ci95": [
+                -0.00661927656214009,
+                0.006222261251319956
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": false,
+              "bootstrap_probability_favors_production": 0.526
+            },
+            "brier": {
+              "point_delta_production_minus_persistence": -0.22871511807479047,
+              "ci95": [
+                -0.2606075666436242,
+                -0.1952980442619491
+              ],
+              "lower_is_better": true,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            }
+          }
+        }
+      },
+      {
+        "kind": "forecast_head",
+        "task": "global_mode",
+        "horizon_seconds": 60,
+        "evidence": "unified_locked_test_report",
+        "evidence_time_utc": "2026-09-29T01:51:41.217773+00:00",
+        "status": "pass",
+        "accuracy_delta_pp": 1.827199,
+        "macro_f1_delta_pp": 0.496406,
+        "brier_delta": -0.298128094,
+        "strictly_beats_persistence": true,
+        "confidence_status": "directional_only",
+        "paired_game_bootstrap": {
+          "unit_of_resampling": "complete game_id with paired red and blue views",
+          "n_complete_games": 128,
+          "replicates": 2000,
+          "seed": 20260989,
+          "confidence_level": 0.95,
+          "interval_method": "paired_game_percentile_bootstrap",
+          "multiplicity_adjustment": "none_pointwise_intervals",
+          "available": true,
+          "metrics": {
+            "accuracy": {
+              "point_delta_production_minus_persistence": 0.01827199164708948,
+              "ci95": [
+                0.0070149413478713925,
+                0.029924696078236477
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 0.9995
+            },
+            "macro_f1": {
+              "point_delta_production_minus_persistence": 0.004964055148541646,
+              "ci95": [
+                -0.005590226501992655,
+                0.016745180152867856
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": false,
+              "bootstrap_probability_favors_production": 0.8205
+            },
+            "brier": {
+              "point_delta_production_minus_persistence": -0.298128093869792,
+              "ci95": [
+                -0.3410247783074556,
+                -0.254222455077433
+              ],
+              "lower_is_better": true,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            }
+          }
+        }
+      },
+      {
+        "kind": "forecast_head",
+        "task": "global_mode",
+        "horizon_seconds": 120,
+        "evidence": "unified_locked_test_report",
+        "evidence_time_utc": "2026-09-29T01:51:41.217773+00:00",
+        "status": "pass",
+        "accuracy_delta_pp": 2.315105,
+        "macro_f1_delta_pp": 0.3782,
+        "brier_delta": -0.337632609,
+        "strictly_beats_persistence": true,
+        "confidence_status": "directional_only",
+        "paired_game_bootstrap": {
+          "unit_of_resampling": "complete game_id with paired red and blue views",
+          "n_complete_games": 128,
+          "replicates": 2000,
+          "seed": 20261049,
+          "confidence_level": 0.95,
+          "interval_method": "paired_game_percentile_bootstrap",
+          "multiplicity_adjustment": "none_pointwise_intervals",
+          "available": true,
+          "metrics": {
+            "accuracy": {
+              "point_delta_production_minus_persistence": 0.023151049827640213,
+              "ci95": [
+                0.011499791486964605,
+                0.03474343909126515
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 0.9995
+            },
+            "macro_f1": {
+              "point_delta_production_minus_persistence": 0.0037819969128037867,
+              "ci95": [
+                -0.007755232394672254,
+                0.015424303650359118
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": false,
+              "bootstrap_probability_favors_production": 0.7445
+            },
+            "brier": {
+              "point_delta_production_minus_persistence": -0.3376326088116163,
+              "ci95": [
+                -0.38297882105802,
+                -0.29237874358349863
+              ],
+              "lower_is_better": true,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            }
+          }
+        }
+      },
+      {
+        "kind": "forecast_head",
+        "task": "opponent_trend",
+        "horizon_seconds": 10,
+        "evidence": "unified_locked_test_report",
+        "evidence_time_utc": "2026-09-29T01:51:41.217773+00:00",
+        "status": "pass",
+        "accuracy_delta_pp": 8.07189,
+        "macro_f1_delta_pp": 26.503719,
+        "brier_delta": -0.378958666,
+        "strictly_beats_persistence": true,
+        "confidence_status": "confirmed",
+        "paired_game_bootstrap": {
+          "unit_of_resampling": "complete game_id with paired red and blue views",
+          "n_complete_games": 128,
+          "replicates": 2000,
+          "seed": 20261039,
+          "confidence_level": 0.95,
+          "interval_method": "paired_game_percentile_bootstrap",
+          "multiplicity_adjustment": "none_pointwise_intervals",
+          "available": true,
+          "metrics": {
+            "accuracy": {
+              "point_delta_production_minus_persistence": 0.08071889822275558,
+              "ci95": [
+                0.06929787723029072,
+                0.09382770326649814
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            },
+            "macro_f1": {
+              "point_delta_production_minus_persistence": 0.2650371861082659,
+              "ci95": [
+                0.247925631955592,
+                0.2824770138116673
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            },
+            "brier": {
+              "point_delta_production_minus_persistence": -0.37895866623964886,
+              "ci95": [
+                -0.4045668842483016,
+                -0.35348554633583895
+              ],
+              "lower_is_better": true,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            }
+          }
+        }
+      },
+      {
+        "kind": "forecast_head",
+        "task": "opponent_trend",
+        "horizon_seconds": 30,
+        "evidence": "unified_locked_test_report",
+        "evidence_time_utc": "2026-09-29T01:51:41.217773+00:00",
+        "status": "pass",
+        "accuracy_delta_pp": 15.764274,
+        "macro_f1_delta_pp": 33.198942,
+        "brier_delta": -0.678924183,
+        "strictly_beats_persistence": true,
+        "confidence_status": "confirmed",
+        "paired_game_bootstrap": {
+          "unit_of_resampling": "complete game_id with paired red and blue views",
+          "n_complete_games": 128,
+          "replicates": 2000,
+          "seed": 20261059,
+          "confidence_level": 0.95,
+          "interval_method": "paired_game_percentile_bootstrap",
+          "multiplicity_adjustment": "none_pointwise_intervals",
+          "available": true,
+          "metrics": {
+            "accuracy": {
+              "point_delta_production_minus_persistence": 0.1576427366899543,
+              "ci95": [
+                0.13669982213467077,
+                0.1781280787603255
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            },
+            "macro_f1": {
+              "point_delta_production_minus_persistence": 0.3319894167199128,
+              "ci95": [
+                0.3182156122327423,
+                0.3448397818967752
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            },
+            "brier": {
+              "point_delta_production_minus_persistence": -0.6789241830593091,
+              "ci95": [
+                -0.7095400695860905,
+                -0.6461025740703261
+              ],
+              "lower_is_better": true,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            }
+          }
+        }
+      },
+      {
+        "kind": "forecast_head",
+        "task": "opponent_trend",
+        "horizon_seconds": 60,
+        "evidence": "unified_locked_test_report",
+        "evidence_time_utc": "2026-09-29T01:51:41.217773+00:00",
+        "status": "pass",
+        "accuracy_delta_pp": 25.15988,
+        "macro_f1_delta_pp": 34.668527,
+        "brier_delta": -0.829790457,
+        "strictly_beats_persistence": true,
+        "confidence_status": "confirmed",
+        "paired_game_bootstrap": {
+          "unit_of_resampling": "complete game_id with paired red and blue views",
+          "n_complete_games": 128,
+          "replicates": 2000,
+          "seed": 20261089,
+          "confidence_level": 0.95,
+          "interval_method": "paired_game_percentile_bootstrap",
+          "multiplicity_adjustment": "none_pointwise_intervals",
+          "available": true,
+          "metrics": {
+            "accuracy": {
+              "point_delta_production_minus_persistence": 0.2515987992691203,
+              "ci95": [
+                0.22774719629585727,
+                0.27507255499676525
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            },
+            "macro_f1": {
+              "point_delta_production_minus_persistence": 0.3466852722362148,
+              "ci95": [
+                0.3321396703210916,
+                0.36091956284173615
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            },
+            "brier": {
+              "point_delta_production_minus_persistence": -0.8297904570284798,
+              "ci95": [
+                -0.8592032433052679,
+                -0.799481936159488
+              ],
+              "lower_is_better": true,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            }
+          }
+        }
+      },
+      {
+        "kind": "forecast_head",
+        "task": "opponent_trend",
+        "horizon_seconds": 120,
+        "evidence": "unified_locked_test_report",
+        "evidence_time_utc": "2026-09-29T01:51:41.217773+00:00",
+        "status": "pass",
+        "accuracy_delta_pp": 30.397994,
+        "macro_f1_delta_pp": 33.460161,
+        "brier_delta": -0.917970346,
+        "strictly_beats_persistence": true,
+        "confidence_status": "confirmed",
+        "paired_game_bootstrap": {
+          "unit_of_resampling": "complete game_id with paired red and blue views",
+          "n_complete_games": 128,
+          "replicates": 2000,
+          "seed": 20261149,
+          "confidence_level": 0.95,
+          "interval_method": "paired_game_percentile_bootstrap",
+          "multiplicity_adjustment": "none_pointwise_intervals",
+          "available": true,
+          "metrics": {
+            "accuracy": {
+              "point_delta_production_minus_persistence": 0.3039799435913507,
+              "ci95": [
+                0.27801034720768364,
+                0.3308450207631434
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            },
+            "macro_f1": {
+              "point_delta_production_minus_persistence": 0.3346016109881116,
+              "ci95": [
+                0.31654714099365006,
+                0.35216227032188274
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            },
+            "brier": {
+              "point_delta_production_minus_persistence": -0.9179703456384647,
+              "ci95": [
+                -0.9503614513526341,
+                -0.8870124165081689
+              ],
+              "lower_is_better": true,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            }
+          }
+        }
+      },
+      {
+        "kind": "forecast_head",
+        "task": "enemy_region",
+        "horizon_seconds": 10,
+        "evidence": "unified_locked_test_report",
+        "evidence_time_utc": "2026-09-29T01:51:41.217773+00:00",
+        "status": "pass",
+        "accuracy_delta_pp": 0.385736,
+        "macro_f1_delta_pp": 0.028062,
+        "brier_delta": -0.109467263,
+        "strictly_beats_persistence": true,
+        "confidence_status": "directional_only",
+        "paired_game_bootstrap": {
+          "unit_of_resampling": "complete game_id with paired red and blue views",
+          "n_complete_games": 128,
+          "replicates": 2000,
+          "seed": 20261139,
+          "confidence_level": 0.95,
+          "interval_method": "paired_game_percentile_bootstrap",
+          "multiplicity_adjustment": "none_pointwise_intervals",
+          "available": true,
+          "metrics": {
+            "accuracy": {
+              "point_delta_production_minus_persistence": 0.0038573632779015377,
+              "ci95": [
+                0.0015782267506370602,
+                0.005938522060029361
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 0.9995
+            },
+            "macro_f1": {
+              "point_delta_production_minus_persistence": 0.0002806201923109819,
+              "ci95": [
+                -0.0006020105634670439,
+                0.001069480964448586
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": false,
+              "bootstrap_probability_favors_production": 0.7385
+            },
+            "brier": {
+              "point_delta_production_minus_persistence": -0.10946726315161293,
+              "ci95": [
+                -0.12142612809485602,
+                -0.0983385290257869
+              ],
+              "lower_is_better": true,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            }
+          }
+        }
+      },
+      {
+        "kind": "forecast_head",
+        "task": "enemy_region",
+        "horizon_seconds": 30,
+        "evidence": "unified_locked_test_report",
+        "evidence_time_utc": "2026-09-29T01:51:41.217773+00:00",
+        "status": "pass",
+        "accuracy_delta_pp": 1.376174,
+        "macro_f1_delta_pp": 0.120287,
+        "brier_delta": -0.236389459,
+        "strictly_beats_persistence": true,
+        "confidence_status": "directional_only",
+        "paired_game_bootstrap": {
+          "unit_of_resampling": "complete game_id with paired red and blue views",
+          "n_complete_games": 128,
+          "replicates": 2000,
+          "seed": 20261159,
+          "confidence_level": 0.95,
+          "interval_method": "paired_game_percentile_bootstrap",
+          "multiplicity_adjustment": "none_pointwise_intervals",
+          "available": true,
+          "metrics": {
+            "accuracy": {
+              "point_delta_production_minus_persistence": 0.013761744158034217,
+              "ci95": [
+                0.010250909035294426,
+                0.017223779662157684
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            },
+            "macro_f1": {
+              "point_delta_production_minus_persistence": 0.001202867418626477,
+              "ci95": [
+                -0.00016866514020260904,
+                0.002461645021005184
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": false,
+              "bootstrap_probability_favors_production": 0.961
+            },
+            "brier": {
+              "point_delta_production_minus_persistence": -0.23638945919949889,
+              "ci95": [
+                -0.25260626078971216,
+                -0.2209822090020668
+              ],
+              "lower_is_better": true,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            }
+          }
+        }
+      },
+      {
+        "kind": "forecast_head",
+        "task": "enemy_region",
+        "horizon_seconds": 60,
+        "evidence": "unified_locked_test_report",
+        "evidence_time_utc": "2026-09-29T01:51:41.217773+00:00",
+        "status": "pass",
+        "accuracy_delta_pp": 1.934873,
+        "macro_f1_delta_pp": 0.720677,
+        "brier_delta": -0.272545671,
+        "strictly_beats_persistence": true,
+        "confidence_status": "directional_only",
+        "paired_game_bootstrap": {
+          "unit_of_resampling": "complete game_id with paired red and blue views",
+          "n_complete_games": 128,
+          "replicates": 2000,
+          "seed": 20261189,
+          "confidence_level": 0.95,
+          "interval_method": "paired_game_percentile_bootstrap",
+          "multiplicity_adjustment": "none_pointwise_intervals",
+          "available": true,
+          "metrics": {
+            "accuracy": {
+              "point_delta_production_minus_persistence": 0.019348734012007263,
+              "ci95": [
+                0.01246729992279497,
+                0.026625500449984147
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            },
+            "macro_f1": {
+              "point_delta_production_minus_persistence": 0.007206771558345287,
+              "ci95": [
+                -0.0016265353453793676,
+                0.014438924401507515
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": false,
+              "bootstrap_probability_favors_production": 0.925
+            },
+            "brier": {
+              "point_delta_production_minus_persistence": -0.2725456709891188,
+              "ci95": [
+                -0.3008782884428752,
+                -0.2462188458595313
+              ],
+              "lower_is_better": true,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            }
+          }
+        }
+      },
+      {
+        "kind": "forecast_head",
+        "task": "enemy_region",
+        "horizon_seconds": 120,
+        "evidence": "unified_locked_test_report",
+        "evidence_time_utc": "2026-09-29T01:51:41.217773+00:00",
+        "status": "pass",
+        "accuracy_delta_pp": 1.092918,
+        "macro_f1_delta_pp": 0.052177,
+        "brier_delta": -0.326582375,
+        "strictly_beats_persistence": true,
+        "confidence_status": "directional_only",
+        "paired_game_bootstrap": {
+          "unit_of_resampling": "complete game_id with paired red and blue views",
+          "n_complete_games": 128,
+          "replicates": 2000,
+          "seed": 20261249,
+          "confidence_level": 0.95,
+          "interval_method": "paired_game_percentile_bootstrap",
+          "multiplicity_adjustment": "none_pointwise_intervals",
+          "available": true,
+          "metrics": {
+            "accuracy": {
+              "point_delta_production_minus_persistence": 0.010929175806957098,
+              "ci95": [
+                0.00677893048254744,
+                0.016622468189403408
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            },
+            "macro_f1": {
+              "point_delta_production_minus_persistence": 0.0005217720348789645,
+              "ci95": [
+                -0.002479578855478674,
+                0.0028649057452389865
+              ],
+              "lower_is_better": false,
+              "ci_excludes_zero_in_favor_of_production": false,
+              "bootstrap_probability_favors_production": 0.6495
+            },
+            "brier": {
+              "point_delta_production_minus_persistence": -0.3265823752902222,
+              "ci95": [
+                -0.34973106389730446,
+                -0.30429804362291185
+              ],
+              "lower_is_better": true,
+              "ci_excludes_zero_in_favor_of_production": true,
+              "bootstrap_probability_favors_production": 1.0
+            }
+          }
+        }
+      },
+      {
+        "kind": "forecast_head",
+        "task": "enemy_region",
+        "horizon_seconds": 10,
+        "evidence": "standalone_transition_promotion_artifact",
+        "evidence_time_utc": "2026-09-28T08:09:09.950472+00:00",
+        "status": "superseded_by_unified_report",
+        "accuracy_delta_pp": 0.385736,
+        "macro_f1_delta_pp": 0.028062,
+        "strictly_beats_persistence": true,
+        "reason": "Included in the selected unified report."
+      }
+    ],
+    "unified_failures": []
+  },
+  "llm": [],
+  "llm_gate": {
+    "source": "legacy_scenario_reports",
+    "required_scenarios": [
+      {
+        "side": "红",
+        "forecast_context_enabled": false
+      },
+      {
+        "side": "红",
+        "forecast_context_enabled": true
+      },
+      {
+        "side": "蓝",
+        "forecast_context_enabled": false
+      },
+      {
+        "side": "蓝",
+        "forecast_context_enabled": true
+      }
+    ],
+    "missing_scenarios": [
+      {
+        "side": "红",
+        "forecast_context_enabled": false
+      },
+      {
+        "side": "红",
+        "forecast_context_enabled": true
+      },
+      {
+        "side": "蓝",
+        "forecast_context_enabled": false
+      },
+      {
+        "side": "蓝",
+        "forecast_context_enabled": true
+      }
+    ],
+    "structural_failures": [],
+    "structural_robustness_gate": "fail",
+    "policy_value_gate": "unverifiable_without_execution_or_counterfactual_labels"
+  },
+  "llm_acceptance": null,
+  "overall_status": "not_ready",
+  "overall_reasons": [
+    "No current LLM candidate acceptance artifact is available; legacy scenario reports are diagnostic only.",
+    "No controller execution or causal policy-value labels support a deployment claim."
+  ]
+}

@@ -62,7 +62,49 @@ def test_horizon_calibration_widens_overconfident_farther_distribution():
     assert all(abs(sum(calibrated[h]) - 1.0) < 1e-6 for h in (10, 30, 60, 120))
 
 
+def test_temperature_calibration_flattens_far_horizon():
+    from forecast.calibration import calibrate_horizon_probabilities
+    calibrated = calibrate_horizon_probabilities({
+        10: [0.9, 0.05, 0.05], 30: [0.9, 0.05, 0.05],
+        60: [0.9, 0.05, 0.05], 120: [0.9, 0.05, 0.05],
+    })
+    assert max(calibrated[120]) <= max(calibrated[10]) + 1e-6
+    assert calibrated[120][1] > calibrated[10][1]
+
+
+def test_runtime_classification_softmaxes_logits_before_calibration_and_blending():
+    from runtime.temporal_forecast import TemporalForecastRuntime
+
+    logits = {h: torch.tensor([2.0, -1.0, 0.5]) for h in (10, 30, 60, 120)}
+    result = TemporalForecastRuntime._classification(
+        logits, ('进攻', '均衡', '防守'), lambda values: values)
+    expected = torch.softmax(logits[10], dim=0).numpy()
+    observed = np.array([result['10']['probabilities'][name]
+                         for name in ('进攻', '均衡', '防守')])
+    assert np.allclose(observed, expected, atol=1e-6)
+    assert np.isclose(observed.sum(), 1.0)
+
+    prior = {'global_mode': {str(h): '防守' for h in (10, 30, 60, 120)}}
+    fused = TemporalForecastRuntime._classification(
+        logits, ('进攻', '均衡', '防守'), lambda values: values,
+        baseline_labels=prior, task='global_mode',
+        blend_config={'alphas': {f'global_mode@{h}s': 0.0 for h in (10, 30, 60, 120)}})
+    assert fused['30']['top'] == '防守'
+    assert fused['30']['probabilities']['防守'] == 0.98
+
+
 def test_temporal_model_can_emit_entity_slots():
     model = TemporalForecastNet(entity_slots=len(ENTITY_SLOTS))
     outputs = model(torch.zeros(2, 12, FEATURE_DIM))
     assert outputs[10]["entity_state"].shape == (2, len(ENTITY_SLOTS), ENTITY_TARGET_DIM)
+
+
+def test_validation_position_fusion_runtime_is_opt_in_and_reversible():
+    from runtime.temporal_forecast import (TemporalForecastRuntime,
+                                           VALIDATION_POSITION_FUSION_WEIGHTS)
+
+    default = TemporalForecastRuntime("unused")
+    candidate = TemporalForecastRuntime("unused", apply_validation_position_fusion=True)
+    assert default.apply_validation_position_fusion is False
+    assert candidate.apply_validation_position_fusion is True
+    assert VALIDATION_POSITION_FUSION_WEIGHTS == {10: .25, 30: .75, 60: .75, 120: 1.0}

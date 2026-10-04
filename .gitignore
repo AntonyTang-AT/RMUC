@@ -22,3 +22,24 @@ out_m2_rb/
 out_m2_eval_old/
 out_m2_eval_rebalanced/
 data.db
+
+# Local databases, environments, caches and credentials
+*.db
+*.sqlite
+*.sqlite3
+.venv*/
+.pytest_cache/
+.remember/
+work/
+third_party/Open-Jev/
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.npz
+*.npy
+
+# Keep the runtime's curated field resources in their expected paths
+!out_m2/
+out_m2/*
+!out_m2/official/

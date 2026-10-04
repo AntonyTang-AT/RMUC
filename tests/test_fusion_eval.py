@@ -84,33 +84,81 @@ def test_rl_source_fav_align_positive_when_aggressive_on_high_fav():
     m = fe.rl_source_metrics(rl, rule, worldstates, '红')
     assert m['override_rate'] > 0.0
     assert m['fav_align'] is not None and m['fav_align'] > 0.0
+    assert m['policy_constant'] is False
+    assert m['mean_move_diversity'] >= 2.0
+    assert m['fav_align_note'] is None
     assert len(m['move_diversity']) == len(CLS)
     assert m['move_diversity']['步兵3'] >= 2  # RL 在步兵3 上至少出过 2 种 move(推进+坚守)
     assert m['legal_rate'] == 1.0
 
 
+def test_constant_policy_nulls_fav_align_even_if_override():
+    """两源不同常数 move: fav_align 均 None(c 消元), policy_constant=True。"""
+    worldstates = [_high_fav(), _low_fav()]
+    rule = [_decision(0, '均衡', {c: '坚守' for c in CLS}),
+            _decision(1, '防守', {c: '回防' for c in CLS})]
+    # 全程恒推进(与规则不同 → override>0, 但仍是常数策略)
+    rl = [_decision(0, '进攻', {c: '推进' for c in CLS}),
+          _decision(1, '进攻', {c: '推进' for c in CLS})]
+    m = fe.rl_source_metrics(rl, rule, worldstates, '红')
+    assert m['policy_constant'] is True
+    assert m['override_rate'] > 0.0
+    assert m['fav_align'] is None
+    assert m['fav_align_note'] == 'constant_policy_cancels'
+    assert m['mean_move_diversity'] == 1.0
+
+
+def test_compare_constant_policies_not_ge():
+    """两侧常数策略 → both_non_constant=False, phys_ge=None(不可比)。"""
+    phys = {'fav_align': None, 'legal_rate': 1.0, 'override_rate': 0.5,
+            'policy_constant': True, 'mean_move_diversity': 1.0}
+    band = {'fav_align': None, 'legal_rate': 1.0, 'override_rate': 0.9,
+            'policy_constant': True, 'mean_move_diversity': 1.0}
+    c = fe.compare_rl_sources(phys, band)
+    assert c['both_non_constant'] is False
+    assert c['phys_ge_bandit_fav_align'] is None
+    assert abs(c['override_rate_delta_phys_minus_bandit'] - (-0.4)) < 1e-9
+
+
+def test_compare_strict_gt_not_ge_on_equal():
+    """非常数且 fav 相等 → phys_ge=False(严格 >, 杜绝空胜利)。"""
+    phys = {'fav_align': 0.1, 'legal_rate': 1.0, 'override_rate': 0.3,
+            'policy_constant': False, 'mean_move_diversity': 2.0}
+    band = {'fav_align': 0.1, 'legal_rate': 1.0, 'override_rate': 0.3,
+            'policy_constant': False, 'mean_move_diversity': 2.0}
+    c = fe.compare_rl_sources(phys, band)
+    assert c['both_non_constant'] is True
+    assert c['phys_ge_bandit_fav_align'] is False
+    assert c['fav_align_delta_phys_minus_bandit'] == 0.0
+
+
+def test_compare_rl_sources():
+    phys = {'fav_align': 0.12, 'legal_rate': 1.0, 'override_rate': 0.3,
+            'policy_constant': False, 'mean_move_diversity': 2.5}
+    band = {'fav_align': -0.05, 'legal_rate': 0.95, 'override_rate': 0.2,
+            'policy_constant': False, 'mean_move_diversity': 2.0}
+    c = fe.compare_rl_sources(phys, band)
+    assert c['phys_ge_bandit_fav_align'] is True
+    assert abs(c['fav_align_delta_phys_minus_bandit'] - 0.17) < 1e-9
+    assert c['both_legal'] is True and c['both_override'] is True
+    assert c['both_non_constant'] is True
+    # 空对齐(单局无 fav 区分) -> 不可比
+    c2 = fe.compare_rl_sources({'fav_align': None, 'legal_rate': 1.0, 'override_rate': 0.1,
+                                'policy_constant': False, 'mean_move_diversity': 2.0},
+                               {'fav_align': None, 'legal_rate': 1.0, 'override_rate': 0.1,
+                                'policy_constant': False, 'mean_move_diversity': 2.0})
+    assert c2['phys_ge_bandit_fav_align'] is None
+
+
 def test_rl_source_fav_align_zero_when_no_override():
-    """RL 与规则完全一致 -> override=0, fav_align 定义上为 0(无 Δ)。"""
+    """RL 与规则完全一致(常数) -> override=0, policy_constant → fav_align=None。"""
     worldstates = [_high_fav(), _low_fav()]
     rule = [_decision(0, '进攻', {c: '坚守' for c in CLS}),
             _decision(1, '防守', {c: '坚守' for c in CLS})]
     m = fe.rl_source_metrics(list(rule), rule, worldstates, '红')  # 深拷贝同值
     assert m['override_rate'] == 0.0
-    gain = m['fav_align']
-    assert gain is None or gain == 0.0  # 无 Δ -> hi.mean()-lo.mean()=0
-
-
-def test_compare_rl_sources():
-    phys = {'fav_align': 0.12, 'legal_rate': 1.0, 'override_rate': 0.3}
-    band = {'fav_align': -0.05, 'legal_rate': 0.95, 'override_rate': 0.2}
-    c = fe.compare_rl_sources(phys, band)
-    assert c['phys_ge_bandit_fav_align'] is True
-    assert abs(c['fav_align_delta_phys_minus_bandit'] - 0.17) < 1e-9
-    assert c['both_legal'] is True and c['both_override'] is True
-    # 空对齐(单局无 fav 区分) -> 不可比
-    c2 = fe.compare_rl_sources({'fav_align': None, 'legal_rate': 1.0, 'override_rate': 0.1},
-                               {'fav_align': None, 'legal_rate': 1.0, 'override_rate': 0.1})
-    assert c2['phys_ge_bandit_fav_align'] is None
+    assert m['policy_constant'] is True
+    assert m['fav_align'] is None
 
 
 def test_fusion_overview():

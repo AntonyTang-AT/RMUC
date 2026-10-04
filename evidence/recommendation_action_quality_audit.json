@@ -1,0 +1,4593 @@
+{
+  "schema": "recommendation-action-quality-audit-v1",
+  "games": [
+    1778631047459,
+    1778631715625,
+    1778632575621,
+    1778633483984,
+    1778634274546,
+    1778637960624,
+    1778638792994,
+    1778639477645
+  ],
+  "sides": [
+    "红",
+    "蓝"
+  ],
+  "issue_cadence_seconds": 3,
+  "horizons_seconds": [
+    3,
+    10
+  ],
+  "design": {
+    "spatial_baseline": "same unit-time, same start/goal: stay-put predicts current zone and zero route progress; compare actual t+3/t+10 zone and legal shortest-path progress.",
+    "stratification": "game × side × unit type for route scores; compare recommendation with its own same-sample stay-put baseline. Game is the bootstrap cluster.",
+    "hp_control": "for health changes only, compare actionable recommendation observations to no-action-evidence observations matched by game/side/unit type/initial HP band; descriptive association only.",
+    "target_control": "identified target HP change is descriptive because no comparable target-bearing no-action counterfactual exists.",
+    "noncausal_warning": "No controller command log exists. Observed movement/HP/target changes do not establish recommendation execution or benefit."
+  },
+  "action_label_counts_by_side": {
+    "红": {
+      "no_action_evidence": 2939,
+      "cover_and_confirm_target": 2120,
+      "continue_attack_visible_target": 450,
+      "retreat_low_hp": 230
+    },
+    "蓝": {
+      "no_action_evidence": 3336,
+      "cover_and_confirm_target": 1968,
+      "continue_attack_visible_target": 440,
+      "retreat_low_hp": 304
+    }
+  },
+  "explicit_action_counts_by_side": {
+    "红": {
+      "cover_and_confirm_target": 2120,
+      "continue_attack_visible_target": 450,
+      "retreat_low_hp": 230
+    },
+    "蓝": {
+      "cover_and_confirm_target": 1968,
+      "continue_attack_visible_target": 440,
+      "retreat_low_hp": 304
+    }
+  },
+  "action_copy_examples": {
+    "cover_and_confirm_target": {
+      "action": "先留在当前区域确认目标，不单独追击",
+      "short_text": "约8.668米处有疑似目标；先留在场地开放区确认，不单独追击。",
+      "current_state": "附近存在可能交战目标，当前位置场地开放区",
+      "target_unit_id": "蓝:103",
+      "target_unit_type": "步兵3",
+      "target_distance_m": 8.668,
+      "target_zone": null,
+      "movement_goal_zone": null,
+      "first_step_zone": "场地开放区",
+      "first_step_distance_m": 0.0,
+      "path_zones": [
+        "场地开放区"
+      ],
+      "trigger": "出现明确开火/弹药变化，或目标进入有效攻击范围",
+      "stop": "目标确认离开视野，或传感器明确显示没有交战目标",
+      "evaluation": {
+        "scorable": false,
+        "metric": "enemy_confirmation",
+        "status": "unknown",
+        "reason": "仅有距离推断；当前没有足够的目标可见性/控制器开火字段",
+        "window_seconds": 3
+      },
+      "decision_scorecard": {
+        "feasibility": {
+          "status": "not_required",
+          "score": null,
+          "reason": "recommendation_does_not_request_zone_change"
+        },
+        "execution": {
+          "status": "unknown",
+          "coverage": 0.0,
+          "reason": "controller command/acknowledgement logs are unavailable",
+          "observed_behavior_proxy_is_execution": false
+        },
+        "consequence": {
+          "status": "pending",
+          "horizons_seconds": [
+            3,
+            10
+          ],
+          "metrics": [
+            "current_zone_retention",
+            "own_survival",
+            "own_hp_change"
+          ],
+          "interpretation": "observed outcome only; not a measure of execution or causal benefit",
+          "target_confirmation": {
+            "status": "unknown",
+            "reason": "future radar visibility/confirmation field is not available"
+          }
+        },
+        "causal_benefit": {
+          "status": "not_identifiable",
+          "reason": "replay does not intervene on control commands; outcome may be caused by other units/events"
+        }
+      }
+    },
+    "continue_attack_visible_target": {
+      "action": "仅在目标仍可确认且自身安全时继续压制",
+      "short_text": "当前有开火记录，目标步兵3仍需确认；只在目标可见且自身安全时继续压制。",
+      "current_state": "正在攻击，当前位置场地开放区",
+      "target_unit_id": "蓝:103",
+      "target_unit_type": "步兵3",
+      "target_distance_m": 8.563,
+      "target_zone": "蓝上装配区",
+      "movement_goal_zone": null,
+      "first_step_zone": "场地开放区",
+      "first_step_distance_m": 0.0,
+      "path_zones": [
+        "场地开放区"
+      ],
+      "trigger": "目标仍可见且HP比例不低于0.30",
+      "stop": "目标连续两次观测不可见、HP比例低于0.30或交战状态解除",
+      "evaluation": {
+        "scorable": true,
+        "metric": "identified_target_hp_and_survival",
+        "status": "descriptive_if_exact_hp_available",
+        "expected_target_id": "蓝:103",
+        "window_seconds": [
+          3,
+          10
+        ],
+        "confounded_by_other_attackers": true,
+        "visibility_and_command_execution": "unknown"
+      },
+      "decision_scorecard": {
+        "feasibility": {
+          "status": "not_required",
+          "score": null,
+          "reason": "recommendation_does_not_request_zone_change"
+        },
+        "execution": {
+          "status": "unknown",
+          "coverage": 0.0,
+          "reason": "controller command/acknowledgement logs are unavailable",
+          "observed_behavior_proxy_is_execution": false
+        },
+        "consequence": {
+          "status": "pending",
+          "horizons_seconds": [
+            3,
+            10
+          ],
+          "metrics": [
+            "identified_target_hp_change",
+            "target_alive"
+          ],
+          "interpretation": "observed outcome only; not a measure of execution or causal benefit"
+        },
+        "causal_benefit": {
+          "status": "not_identifiable",
+          "reason": "replay does not intervene on control commands; outcome may be caused by other units/events"
+        }
+      }
+    },
+    "retreat_low_hp": {
+      "action": "撤向己方相邻区域并减少暴露",
+      "short_text": "血量10%偏低；建议先撤到蓝基地，减少暴露。",
+      "current_state": "血量偏低（10%），位于蓝上装配区",
+      "target_unit_id": null,
+      "target_unit_type": null,
+      "target_distance_m": null,
+      "target_zone": "蓝基地",
+      "movement_goal_zone": "蓝基地",
+      "first_step_zone": "蓝基地",
+      "first_step_distance_m": 6.33,
+      "path_zones": [
+        "蓝上装配区",
+        "蓝基地"
+      ],
+      "trigger": "当前HP比例低于0.30",
+      "stop": "HP比例恢复到0.50以上，或目标相邻区不再可通行",
+      "evaluation": {
+        "scorable": true,
+        "metric": "next_zone",
+        "expected": "蓝基地",
+        "threshold": "next observed functional zone equals first_step_zone"
+      },
+      "decision_scorecard": {
+        "feasibility": {
+          "status": "scored",
+          "score": 100.0,
+          "metric": "functional_zone_route_legality",
+          "path_zones": [
+            "蓝上装配区",
+            "蓝基地"
+          ],
+          "estimated_travel_time_s": null,
+          "travel_time_status": "unknown",
+          "reason": "all route transitions are legal"
+        },
+        "execution": {
+          "status": "unknown",
+          "coverage": 0.0,
+          "reason": "controller command/acknowledgement logs are unavailable",
+          "observed_behavior_proxy_is_execution": false
+        },
+        "consequence": {
+          "status": "pending",
+          "horizons_seconds": [
+            3,
+            10
+          ],
+          "metrics": [
+            "progress_toward_safe_zone",
+            "own_survival",
+            "own_hp_change"
+          ],
+          "interpretation": "observed outcome only; not a measure of execution or causal benefit"
+        },
+        "causal_benefit": {
+          "status": "not_identifiable",
+          "reason": "replay does not intervene on control commands; outcome may be caused by other units/events"
+        }
+      }
+    }
+  },
+  "by_action_label": {
+    "cover_and_confirm_target": {
+      "sample_count": 0,
+      "by_horizon": {
+        "3": {
+          "scorable_recommendations": 0,
+          "spatial_goal_metrics": {
+            "status": "unknown",
+            "reason": "action_has_no_movement_goal_or_exact_future_zone"
+          }
+        },
+        "10": {
+          "scorable_recommendations": 0,
+          "spatial_goal_metrics": {
+            "status": "unknown",
+            "reason": "action_has_no_movement_goal_or_exact_future_zone"
+          }
+        }
+      },
+      "paired_vs_stay_put": {
+        "3": {
+          "goal_hits": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 0,
+              "mean_delta": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              },
+              "蓝": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              }
+            },
+            "game_side_cells": 0
+          },
+          "progress_hits": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 0,
+              "mean_delta": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              },
+              "蓝": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              }
+            },
+            "game_side_cells": 0
+          },
+          "distance_reduction": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 0,
+              "mean_delta": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              },
+              "蓝": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              }
+            },
+            "game_side_cells": 0
+          }
+        },
+        "10": {
+          "goal_hits": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 0,
+              "mean_delta": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              },
+              "蓝": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              }
+            },
+            "game_side_cells": 0
+          },
+          "progress_hits": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 0,
+              "mean_delta": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              },
+              "蓝": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              }
+            },
+            "game_side_cells": 0
+          },
+          "distance_reduction": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 0,
+              "mean_delta": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              },
+              "蓝": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              }
+            },
+            "game_side_cells": 0
+          }
+        }
+      },
+      "by_side": {
+        "红": {
+          "3": {
+            "scorable_recommendations": 0,
+            "spatial_goal_metrics": {
+              "status": "unknown",
+              "reason": "action_has_no_movement_goal_or_exact_future_zone"
+            }
+          },
+          "10": {
+            "scorable_recommendations": 0,
+            "spatial_goal_metrics": {
+              "status": "unknown",
+              "reason": "action_has_no_movement_goal_or_exact_future_zone"
+            }
+          }
+        },
+        "蓝": {
+          "3": {
+            "scorable_recommendations": 0,
+            "spatial_goal_metrics": {
+              "status": "unknown",
+              "reason": "action_has_no_movement_goal_or_exact_future_zone"
+            }
+          },
+          "10": {
+            "scorable_recommendations": 0,
+            "spatial_goal_metrics": {
+              "status": "unknown",
+              "reason": "action_has_no_movement_goal_or_exact_future_zone"
+            }
+          }
+        }
+      },
+      "by_unit_type": {
+        "哨兵": {
+          "by_horizon": {
+            "3": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            },
+            "10": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            }
+          },
+          "paired_vs_stay_put": {
+            "3": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            },
+            "10": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            }
+          }
+        },
+        "步兵3": {
+          "by_horizon": {
+            "3": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            },
+            "10": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            }
+          },
+          "paired_vs_stay_put": {
+            "3": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            },
+            "10": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            }
+          }
+        },
+        "步兵4": {
+          "by_horizon": {
+            "3": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            },
+            "10": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            }
+          },
+          "paired_vs_stay_put": {
+            "3": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            },
+            "10": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            }
+          }
+        },
+        "空中": {
+          "by_horizon": {
+            "3": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            },
+            "10": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            }
+          },
+          "paired_vs_stay_put": {
+            "3": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            },
+            "10": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            }
+          }
+        },
+        "英雄": {
+          "by_horizon": {
+            "3": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            },
+            "10": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            }
+          },
+          "paired_vs_stay_put": {
+            "3": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            },
+            "10": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "continue_attack_visible_target": {
+      "sample_count": 0,
+      "by_horizon": {
+        "3": {
+          "scorable_recommendations": 0,
+          "spatial_goal_metrics": {
+            "status": "unknown",
+            "reason": "action_has_no_movement_goal_or_exact_future_zone"
+          }
+        },
+        "10": {
+          "scorable_recommendations": 0,
+          "spatial_goal_metrics": {
+            "status": "unknown",
+            "reason": "action_has_no_movement_goal_or_exact_future_zone"
+          }
+        }
+      },
+      "paired_vs_stay_put": {
+        "3": {
+          "goal_hits": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 0,
+              "mean_delta": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              },
+              "蓝": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              }
+            },
+            "game_side_cells": 0
+          },
+          "progress_hits": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 0,
+              "mean_delta": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              },
+              "蓝": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              }
+            },
+            "game_side_cells": 0
+          },
+          "distance_reduction": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 0,
+              "mean_delta": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              },
+              "蓝": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              }
+            },
+            "game_side_cells": 0
+          }
+        },
+        "10": {
+          "goal_hits": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 0,
+              "mean_delta": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              },
+              "蓝": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              }
+            },
+            "game_side_cells": 0
+          },
+          "progress_hits": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 0,
+              "mean_delta": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              },
+              "蓝": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              }
+            },
+            "game_side_cells": 0
+          },
+          "distance_reduction": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 0,
+              "mean_delta": null,
+              "ci95": [
+                null,
+                null
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              },
+              "蓝": {
+                "complete_games": 0,
+                "mean_delta": null,
+                "ci95": [
+                  null,
+                  null
+                ]
+              }
+            },
+            "game_side_cells": 0
+          }
+        }
+      },
+      "by_side": {
+        "红": {
+          "3": {
+            "scorable_recommendations": 0,
+            "spatial_goal_metrics": {
+              "status": "unknown",
+              "reason": "action_has_no_movement_goal_or_exact_future_zone"
+            }
+          },
+          "10": {
+            "scorable_recommendations": 0,
+            "spatial_goal_metrics": {
+              "status": "unknown",
+              "reason": "action_has_no_movement_goal_or_exact_future_zone"
+            }
+          }
+        },
+        "蓝": {
+          "3": {
+            "scorable_recommendations": 0,
+            "spatial_goal_metrics": {
+              "status": "unknown",
+              "reason": "action_has_no_movement_goal_or_exact_future_zone"
+            }
+          },
+          "10": {
+            "scorable_recommendations": 0,
+            "spatial_goal_metrics": {
+              "status": "unknown",
+              "reason": "action_has_no_movement_goal_or_exact_future_zone"
+            }
+          }
+        }
+      },
+      "by_unit_type": {
+        "哨兵": {
+          "by_horizon": {
+            "3": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            },
+            "10": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            }
+          },
+          "paired_vs_stay_put": {
+            "3": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            },
+            "10": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            }
+          }
+        },
+        "步兵3": {
+          "by_horizon": {
+            "3": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            },
+            "10": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            }
+          },
+          "paired_vs_stay_put": {
+            "3": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            },
+            "10": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            }
+          }
+        },
+        "步兵4": {
+          "by_horizon": {
+            "3": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            },
+            "10": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            }
+          },
+          "paired_vs_stay_put": {
+            "3": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            },
+            "10": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            }
+          }
+        },
+        "空中": {
+          "by_horizon": {
+            "3": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            },
+            "10": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            }
+          },
+          "paired_vs_stay_put": {
+            "3": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            },
+            "10": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            }
+          }
+        },
+        "英雄": {
+          "by_horizon": {
+            "3": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            },
+            "10": {
+              "scorable_recommendations": 0,
+              "spatial_goal_metrics": {
+                "status": "unknown",
+                "reason": "action_has_no_movement_goal_or_exact_future_zone"
+              }
+            }
+          },
+          "paired_vs_stay_put": {
+            "3": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            },
+            "10": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 0,
+                    "mean_delta": null,
+                    "ci95": [
+                      null,
+                      null
+                    ]
+                  }
+                },
+                "game_side_cells": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "retreat_low_hp": {
+      "sample_count": 1059,
+      "by_horizon": {
+        "3": {
+          "scorable_recommendations": 534,
+          "target_zone_hit_rate": 0.04681647940074907,
+          "stay_put_baseline_target_zone_hit_rate": 0.0,
+          "target_zone_hit_delta_pp": 4.681647940074907,
+          "legal_route_progress_rate": 0.05707762557077625,
+          "mean_legal_hops_reduced": -0.0045662100456621,
+          "mean_goal_distance_reduction_m": 0.2013713971069107,
+          "positive_distance_progress_rate": 0.5823970037453183,
+          "own_hp_delta_mean": 0.011825935924250531,
+          "own_hp_scored": 534,
+          "identified_target_hp_delta_mean": -0.008815319658279945,
+          "identified_target_hp_scored": 277,
+          "current_zone_retention_rate": 0.0,
+          "current_zone_retention_scored": 0,
+          "own_survival_rate": 0.949438202247191,
+          "own_survival_scored": 534,
+          "identified_target_alive_rate": 0.9386281588447654,
+          "identified_target_alive_scored": 277
+        },
+        "10": {
+          "scorable_recommendations": 525,
+          "target_zone_hit_rate": 0.0419047619047619,
+          "stay_put_baseline_target_zone_hit_rate": 0.0,
+          "target_zone_hit_delta_pp": 4.190476190476191,
+          "legal_route_progress_rate": 0.05250596658711217,
+          "mean_legal_hops_reduced": -0.21957040572792363,
+          "mean_goal_distance_reduction_m": 0.018128349015408732,
+          "positive_distance_progress_rate": 0.5276190476190477,
+          "own_hp_delta_mean": 0.0809342142513571,
+          "own_hp_scored": 525,
+          "identified_target_hp_delta_mean": 0.01620902381931794,
+          "identified_target_hp_scored": 272,
+          "current_zone_retention_rate": 0.0,
+          "current_zone_retention_scored": 0,
+          "own_survival_rate": 0.8857142857142857,
+          "own_survival_scored": 525,
+          "identified_target_alive_rate": 0.9779411764705882,
+          "identified_target_alive_scored": 272
+        }
+      },
+      "paired_vs_stay_put": {
+        "3": {
+          "goal_hits": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 7,
+              "mean_delta": 0.04553402101938758,
+              "ci95": [
+                0.02645704435620402,
+                0.06633001918716204
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 7,
+                "mean_delta": 0.04005871523112903,
+                "ci95": [
+                  0.011198686371100164,
+                  0.07249838284321043
+                ]
+              },
+              "蓝": {
+                "complete_games": 8,
+                "mean_delta": 0.049206331688397685,
+                "ci95": [
+                  0.02154149652356252,
+                  0.08218306084159742
+                ]
+              }
+            },
+            "game_side_cells": 15
+          },
+          "progress_hits": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 7,
+              "mean_delta": 0.06575765504336932,
+              "ci95": [
+                0.03431687360258789,
+                0.10195835910121624
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 7,
+                "mean_delta": 0.05699459270887842,
+                "ci95": [
+                  0.01277690563404849,
+                  0.10544217687074829
+                ]
+              },
+              "蓝": {
+                "complete_games": 8,
+                "mean_delta": 0.07027319527319527,
+                "ci95": [
+                  0.0277487714987715,
+                  0.11909076284076284
+                ]
+              }
+            },
+            "game_side_cells": 15
+          },
+          "distance_reduction": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 7,
+              "mean_delta": 0.3203300359335963,
+              "ci95": [
+                0.09318684314290006,
+                0.5588847976104062
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 7,
+                "mean_delta": 0.04890036177292011,
+                "ci95": [
+                  -0.18423112899894542,
+                  0.25390138109375954
+                ]
+              },
+              "蓝": {
+                "complete_games": 8,
+                "mean_delta": 0.5317439979881585,
+                "ci95": [
+                  0.2427304808650678,
+                  0.8869802459223216
+                ]
+              }
+            },
+            "game_side_cells": 15
+          }
+        },
+        "10": {
+          "goal_hits": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 7,
+              "mean_delta": 0.03879456640955977,
+              "ci95": [
+                0.010562119584675974,
+                0.06907378335949764
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 7,
+                "mean_delta": 0.05513784461152882,
+                "ci95": [
+                  0.007518796992481203,
+                  0.11027568922305764
+                ]
+              },
+              "蓝": {
+                "complete_games": 8,
+                "mean_delta": 0.027457377181641887,
+                "ci95": [
+                  0.011160714285714284,
+                  0.043498168498168496
+                ]
+              }
+            },
+            "game_side_cells": 15
+          },
+          "progress_hits": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 7,
+              "mean_delta": 0.060462921432309184,
+              "ci95": [
+                0.015362188831576588,
+                0.11760577857516633
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 7,
+                "mean_delta": 0.08493683187560738,
+                "ci95": [
+                  0.008746355685131196,
+                  0.1889212827988338
+                ]
+              },
+              "蓝": {
+                "complete_games": 8,
+                "mean_delta": 0.0404831903707803,
+                "ci95": [
+                  0.017326139088729015,
+                  0.0622163807415606
+                ]
+              }
+            },
+            "game_side_cells": 15
+          },
+          "distance_reduction": {
+            "red_blue_equal_game_paired_bootstrap": {
+              "complete_games": 7,
+              "mean_delta": -0.2444892804661913,
+              "ci95": [
+                -0.5011009787487066,
+                0.011213125212387362
+              ]
+            },
+            "by_side": {
+              "红": {
+                "complete_games": 7,
+                "mean_delta": -0.7286968639332551,
+                "ci95": [
+                  -1.2683107935030045,
+                  -0.2024442842993536
+                ]
+              },
+              "蓝": {
+                "complete_games": 8,
+                "mean_delta": 0.22892677628039793,
+                "ci95": [
+                  -0.004493508507531791,
+                  0.5154274166757173
+                ]
+              }
+            },
+            "game_side_cells": 15
+          }
+        }
+      },
+      "by_side": {
+        "红": {
+          "3": {
+            "scorable_recommendations": 230,
+            "target_zone_hit_rate": 0.043478260869565216,
+            "stay_put_baseline_target_zone_hit_rate": 0.0,
+            "target_zone_hit_delta_pp": 4.3478260869565215,
+            "legal_route_progress_rate": 0.05235602094240838,
+            "mean_legal_hops_reduced": -0.02617801047120419,
+            "mean_goal_distance_reduction_m": 0.11966443947152548,
+            "positive_distance_progress_rate": 0.5652173913043478,
+            "own_hp_delta_mean": 0.005970462387853692,
+            "own_hp_scored": 230,
+            "identified_target_hp_delta_mean": -0.012085717602958979,
+            "identified_target_hp_scored": 87,
+            "current_zone_retention_rate": 0.0,
+            "current_zone_retention_scored": 0,
+            "own_survival_rate": 0.9478260869565217,
+            "own_survival_scored": 230,
+            "identified_target_alive_rate": 0.9310344827586207,
+            "identified_target_alive_scored": 87
+          },
+          "10": {
+            "scorable_recommendations": 227,
+            "target_zone_hit_rate": 0.03524229074889868,
+            "stay_put_baseline_target_zone_hit_rate": 0.0,
+            "target_zone_hit_delta_pp": 3.524229074889868,
+            "legal_route_progress_rate": 0.0425531914893617,
+            "mean_legal_hops_reduced": -0.20212765957446807,
+            "mean_goal_distance_reduction_m": -0.22751964181783219,
+            "positive_distance_progress_rate": 0.5154185022026432,
+            "own_hp_delta_mean": 0.06688865686442778,
+            "own_hp_scored": 227,
+            "identified_target_hp_delta_mean": 0.011187858652974935,
+            "identified_target_hp_scored": 86,
+            "current_zone_retention_rate": 0.0,
+            "current_zone_retention_scored": 0,
+            "own_survival_rate": 0.8546255506607929,
+            "own_survival_scored": 227,
+            "identified_target_alive_rate": 1.0,
+            "identified_target_alive_scored": 86
+          }
+        },
+        "蓝": {
+          "3": {
+            "scorable_recommendations": 304,
+            "target_zone_hit_rate": 0.049342105263157895,
+            "stay_put_baseline_target_zone_hit_rate": 0.0,
+            "target_zone_hit_delta_pp": 4.934210526315789,
+            "legal_route_progress_rate": 0.06072874493927125,
+            "mean_legal_hops_reduced": 0.012145748987854251,
+            "mean_goal_distance_reduction_m": 0.2631891611073667,
+            "positive_distance_progress_rate": 0.5953947368421053,
+            "own_hp_delta_mean": 0.016256063928761298,
+            "own_hp_scored": 304,
+            "identified_target_hp_delta_mean": -0.007317821652032174,
+            "identified_target_hp_scored": 190,
+            "current_zone_retention_rate": 0.0,
+            "current_zone_retention_scored": 0,
+            "own_survival_rate": 0.9506578947368421,
+            "own_survival_scored": 304,
+            "identified_target_alive_rate": 0.9421052631578948,
+            "identified_target_alive_scored": 190
+          },
+          "10": {
+            "scorable_recommendations": 298,
+            "target_zone_hit_rate": 0.04697986577181208,
+            "stay_put_baseline_target_zone_hit_rate": 0.0,
+            "target_zone_hit_delta_pp": 4.697986577181208,
+            "legal_route_progress_rate": 0.06060606060606061,
+            "mean_legal_hops_reduced": -0.23376623376623376,
+            "mean_goal_distance_reduction_m": 0.2052494695494547,
+            "positive_distance_progress_rate": 0.5369127516778524,
+            "own_hp_delta_mean": 0.09163334689173615,
+            "own_hp_scored": 298,
+            "identified_target_hp_delta_mean": 0.018530637820960406,
+            "identified_target_hp_scored": 186,
+            "current_zone_retention_rate": 0.0,
+            "current_zone_retention_scored": 0,
+            "own_survival_rate": 0.9093959731543624,
+            "own_survival_scored": 298,
+            "identified_target_alive_rate": 0.967741935483871,
+            "identified_target_alive_scored": 186
+          }
+        }
+      },
+      "by_unit_type": {
+        "哨兵": {
+          "by_horizon": {
+            "3": {
+              "scorable_recommendations": 50,
+              "target_zone_hit_rate": 0.06,
+              "stay_put_baseline_target_zone_hit_rate": 0.0,
+              "target_zone_hit_delta_pp": 6.0,
+              "legal_route_progress_rate": 0.08571428571428572,
+              "mean_legal_hops_reduced": 0.08571428571428572,
+              "mean_goal_distance_reduction_m": 0.28476798127989417,
+              "positive_distance_progress_rate": 0.72,
+              "own_hp_delta_mean": -0.0014500000000000008,
+              "own_hp_scored": 50,
+              "identified_target_hp_delta_mean": -0.00410966810966811,
+              "identified_target_hp_scored": 33,
+              "current_zone_retention_rate": 0.0,
+              "current_zone_retention_scored": 0,
+              "own_survival_rate": 0.94,
+              "own_survival_scored": 50,
+              "identified_target_alive_rate": 1.0,
+              "identified_target_alive_scored": 33
+            },
+            "10": {
+              "scorable_recommendations": 48,
+              "target_zone_hit_rate": 0.041666666666666664,
+              "stay_put_baseline_target_zone_hit_rate": 0.0,
+              "target_zone_hit_delta_pp": 4.166666666666666,
+              "legal_route_progress_rate": 0.07692307692307693,
+              "mean_legal_hops_reduced": 0.07692307692307693,
+              "mean_goal_distance_reduction_m": 0.586111844389985,
+              "positive_distance_progress_rate": 0.7083333333333334,
+              "own_hp_delta_mean": 5.208333333333107e-05,
+              "own_hp_scored": 48,
+              "identified_target_hp_delta_mean": -0.0064531024531024475,
+              "identified_target_hp_scored": 33,
+              "current_zone_retention_rate": 0.0,
+              "current_zone_retention_scored": 0,
+              "own_survival_rate": 0.875,
+              "own_survival_scored": 48,
+              "identified_target_alive_rate": 1.0,
+              "identified_target_alive_scored": 33
+            }
+          },
+          "paired_vs_stay_put": {
+            "3": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 2,
+                    "mean_delta": 0.125,
+                    "ci95": [
+                      0.0,
+                      0.25
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 3,
+                    "mean_delta": 0.013888888888888888,
+                    "ci95": [
+                      0.0,
+                      0.041666666666666664
+                    ]
+                  }
+                },
+                "game_side_cells": 5
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 2,
+                    "mean_delta": 0.16666666666666666,
+                    "ci95": [
+                      0.0,
+                      0.3333333333333333
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 3,
+                    "mean_delta": 0.018518518518518517,
+                    "ci95": [
+                      0.0,
+                      0.05555555555555555
+                    ]
+                  }
+                },
+                "game_side_cells": 5
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 2,
+                    "mean_delta": 0.5278055220299449,
+                    "ci95": [
+                      0.0523974621479079,
+                      1.0032135819119818
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 3,
+                    "mean_delta": 0.09947608693534289,
+                    "ci95": [
+                      -0.008311041928627638,
+                      0.21564386158830265
+                    ]
+                  }
+                },
+                "game_side_cells": 5
+              }
+            },
+            "10": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 2,
+                    "mean_delta": 0.0625,
+                    "ci95": [
+                      0.0,
+                      0.125
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 3,
+                    "mean_delta": 0.015151515151515152,
+                    "ci95": [
+                      0.0,
+                      0.04545454545454545
+                    ]
+                  }
+                },
+                "game_side_cells": 5
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 2,
+                    "mean_delta": 0.125,
+                    "ci95": [
+                      0.0,
+                      0.25
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 2,
+                    "mean_delta": 0.038461538461538464,
+                    "ci95": [
+                      0.0,
+                      0.07692307692307693
+                    ]
+                  }
+                },
+                "game_side_cells": 4
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 2,
+                    "mean_delta": 0.8965600912565723,
+                    "ci95": [
+                      0.34446148981520364,
+                      1.448658692697941
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 3,
+                    "mean_delta": 0.2509111052077836,
+                    "ci95": [
+                      -0.00786010146847671,
+                      0.5017547808132927
+                    ]
+                  }
+                },
+                "game_side_cells": 5
+              }
+            }
+          }
+        },
+        "工程": {
+          "by_horizon": {
+            "3": {
+              "scorable_recommendations": 81,
+              "target_zone_hit_rate": 0.04938271604938271,
+              "stay_put_baseline_target_zone_hit_rate": 0.0,
+              "target_zone_hit_delta_pp": 4.938271604938271,
+              "legal_route_progress_rate": 0.058823529411764705,
+              "mean_legal_hops_reduced": 0.014705882352941176,
+              "mean_goal_distance_reduction_m": 0.11182737043628307,
+              "positive_distance_progress_rate": 0.5061728395061729,
+              "own_hp_delta_mean": 0.003950617283950617,
+              "own_hp_scored": 81,
+              "identified_target_hp_delta_mean": 0.0,
+              "identified_target_hp_scored": 0,
+              "current_zone_retention_rate": 0.0,
+              "current_zone_retention_scored": 0,
+              "own_survival_rate": 0.9506172839506173,
+              "own_survival_scored": 81,
+              "identified_target_alive_rate": 0.0,
+              "identified_target_alive_scored": 0
+            },
+            "10": {
+              "scorable_recommendations": 81,
+              "target_zone_hit_rate": 0.037037037037037035,
+              "stay_put_baseline_target_zone_hit_rate": 0.0,
+              "target_zone_hit_delta_pp": 3.7037037037037033,
+              "legal_route_progress_rate": 0.04918032786885246,
+              "mean_legal_hops_reduced": -0.06557377049180328,
+              "mean_goal_distance_reduction_m": -0.04776960150752431,
+              "positive_distance_progress_rate": 0.4691358024691358,
+              "own_hp_delta_mean": 0.030271604938271603,
+              "own_hp_scored": 81,
+              "identified_target_hp_delta_mean": 0.0,
+              "identified_target_hp_scored": 0,
+              "current_zone_retention_rate": 0.0,
+              "current_zone_retention_scored": 0,
+              "own_survival_rate": 0.8518518518518519,
+              "own_survival_scored": 81,
+              "identified_target_alive_rate": 0.0,
+              "identified_target_alive_scored": 0
+            }
+          },
+          "paired_vs_stay_put": {
+            "3": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 1,
+                  "mean_delta": 0.07692307692307693,
+                  "ci95": [
+                    0.07692307692307693,
+                    0.07692307692307693
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 3,
+                    "mean_delta": 0.0,
+                    "ci95": [
+                      0.0,
+                      0.0
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 3,
+                    "mean_delta": 0.16491841491841494,
+                    "ci95": [
+                      0.0909090909090909,
+                      0.25
+                    ]
+                  }
+                },
+                "game_side_cells": 6
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 1,
+                  "mean_delta": 0.14285714285714285,
+                  "ci95": [
+                    0.14285714285714285,
+                    0.14285714285714285
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 3,
+                    "mean_delta": 0.0,
+                    "ci95": [
+                      0.0,
+                      0.0
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 3,
+                    "mean_delta": 0.24338624338624337,
+                    "ci95": [
+                      0.1111111111111111,
+                      0.3333333333333333
+                    ]
+                  }
+                },
+                "game_side_cells": 6
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 1,
+                  "mean_delta": -0.7672906639305814,
+                  "ci95": [
+                    -0.7672906639305814,
+                    -0.7672906639305814
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 3,
+                    "mean_delta": -0.7387784114977447,
+                    "ci95": [
+                      -2.1468168676897523,
+                      -0.010384960048725578
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 3,
+                    "mean_delta": 0.6969286525208592,
+                    "ci95": [
+                      0.3284567156684646,
+                      1.1500937020655235
+                    ]
+                  }
+                },
+                "game_side_cells": 6
+              }
+            },
+            "10": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 1,
+                  "mean_delta": 0.038461538461538464,
+                  "ci95": [
+                    0.038461538461538464,
+                    0.038461538461538464
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 3,
+                    "mean_delta": 0.0,
+                    "ci95": [
+                      0.0,
+                      0.0
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 3,
+                    "mean_delta": 0.08624708624708625,
+                    "ci95": [
+                      0.0,
+                      0.1818181818181818
+                    ]
+                  }
+                },
+                "game_side_cells": 6
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 0,
+                  "mean_delta": null,
+                  "ci95": [
+                    null,
+                    null
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 2,
+                    "mean_delta": 0.0,
+                    "ci95": [
+                      0.0,
+                      0.0
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 3,
+                    "mean_delta": 0.20000000000000004,
+                    "ci95": [
+                      0.0,
+                      0.4000000000000001
+                    ]
+                  }
+                },
+                "game_side_cells": 5
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 1,
+                  "mean_delta": -1.4087322935068047,
+                  "ci95": [
+                    -1.4087322935068047,
+                    -1.4087322935068047
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 3,
+                    "mean_delta": -1.1976926570100155,
+                    "ci95": [
+                      -3.349568084221373,
+                      -0.0034416579559577443
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 3,
+                    "mean_delta": 0.5656587036476975,
+                    "ci95": [
+                      0.3642765593703565,
+                      0.8005960543649722
+                    ]
+                  }
+                },
+                "game_side_cells": 6
+              }
+            }
+          }
+        },
+        "步兵3": {
+          "by_horizon": {
+            "3": {
+              "scorable_recommendations": 122,
+              "target_zone_hit_rate": 0.05737704918032787,
+              "stay_put_baseline_target_zone_hit_rate": 0.0,
+              "target_zone_hit_delta_pp": 5.737704918032787,
+              "legal_route_progress_rate": 0.0707070707070707,
+              "mean_legal_hops_reduced": -0.010101010101010102,
+              "mean_goal_distance_reduction_m": 0.1676422336053841,
+              "positive_distance_progress_rate": 0.5901639344262295,
+              "own_hp_delta_mean": 0.013179287015352589,
+              "own_hp_scored": 122,
+              "identified_target_hp_delta_mean": -0.004734700220414503,
+              "identified_target_hp_scored": 70,
+              "current_zone_retention_rate": 0.0,
+              "current_zone_retention_scored": 0,
+              "own_survival_rate": 0.9590163934426229,
+              "own_survival_scored": 122,
+              "identified_target_alive_rate": 1.0,
+              "identified_target_alive_scored": 70
+            },
+            "10": {
+              "scorable_recommendations": 120,
+              "target_zone_hit_rate": 0.09166666666666666,
+              "stay_put_baseline_target_zone_hit_rate": 0.0,
+              "target_zone_hit_delta_pp": 9.166666666666666,
+              "legal_route_progress_rate": 0.11458333333333333,
+              "mean_legal_hops_reduced": -0.15625,
+              "mean_goal_distance_reduction_m": 0.10178472215151173,
+              "positive_distance_progress_rate": 0.5833333333333334,
+              "own_hp_delta_mean": 0.10587890812890813,
+              "own_hp_scored": 120,
+              "identified_target_hp_delta_mean": -0.01906765783236371,
+              "identified_target_hp_scored": 68,
+              "current_zone_retention_rate": 0.0,
+              "current_zone_retention_scored": 0,
+              "own_survival_rate": 0.9333333333333333,
+              "own_survival_scored": 120,
+              "identified_target_alive_rate": 1.0,
+              "identified_target_alive_scored": 68
+            }
+          },
+          "paired_vs_stay_put": {
+            "3": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 2,
+                  "mean_delta": 0.06349206349206349,
+                  "ci95": [
+                    0.05555555555555555,
+                    0.07142857142857142
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 5,
+                    "mean_delta": 0.04722222222222222,
+                    "ci95": [
+                      0.0,
+                      0.09722222222222222
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 5,
+                    "mean_delta": 0.11146997929606625,
+                    "ci95": [
+                      0.002898550724637681,
+                      0.26857142857142857
+                    ]
+                  }
+                },
+                "game_side_cells": 10
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 2,
+                  "mean_delta": 0.10416666666666666,
+                  "ci95": [
+                    0.08333333333333333,
+                    0.125
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 5,
+                    "mean_delta": 0.0696969696969697,
+                    "ci95": [
+                      0.0,
+                      0.14242424242424243
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 5,
+                    "mean_delta": 0.15307692307692305,
+                    "ci95": [
+                      0.003076923076923077,
+                      0.35
+                    ]
+                  }
+                },
+                "game_side_cells": 10
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 2,
+                  "mean_delta": -0.07095379751783487,
+                  "ci95": [
+                    -0.5766884886109311,
+                    0.4347808935752614
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 5,
+                    "mean_delta": -0.20138803045656103,
+                    "ci95": [
+                      -1.0389959239494753,
+                      0.36455621113783926
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 5,
+                    "mean_delta": 0.30079081894957527,
+                    "ci95": [
+                      0.11033734681382365,
+                      0.5044402946049272
+                    ]
+                  }
+                },
+                "game_side_cells": 10
+              }
+            },
+            "10": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 2,
+                  "mean_delta": 0.03571428571428571,
+                  "ci95": [
+                    0.0,
+                    0.07142857142857142
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 5,
+                    "mean_delta": 0.0625,
+                    "ci95": [
+                      0.0,
+                      0.1875
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 5,
+                    "mean_delta": 0.08051172707889126,
+                    "ci95": [
+                      0.011940298507462687,
+                      0.14908315565031982
+                    ]
+                  }
+                },
+                "game_side_cells": 10
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 2,
+                  "mean_delta": 0.05,
+                  "ci95": [
+                    0.0,
+                    0.1
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 5,
+                    "mean_delta": 0.125,
+                    "ci95": [
+                      0.0,
+                      0.375
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 5,
+                    "mean_delta": 0.10269841269841269,
+                    "ci95": [
+                      0.012698412698412698,
+                      0.1926984126984127
+                    ]
+                  }
+                },
+                "game_side_cells": 10
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 2,
+                  "mean_delta": -0.5171130332682975,
+                  "ci95": [
+                    -0.8996404366303321,
+                    -0.1345856299062628
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 5,
+                    "mean_delta": -1.6250773529683542,
+                    "ci95": [
+                      -2.912863191273425,
+                      -0.13430373543969484
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 5,
+                    "mean_delta": 0.26441163861460326,
+                    "ci95": [
+                      -0.16806743717262804,
+                      0.7453322511841418
+                    ]
+                  }
+                },
+                "game_side_cells": 10
+              }
+            }
+          }
+        },
+        "步兵4": {
+          "by_horizon": {
+            "3": {
+              "scorable_recommendations": 227,
+              "target_zone_hit_rate": 0.03524229074889868,
+              "stay_put_baseline_target_zone_hit_rate": 0.0,
+              "target_zone_hit_delta_pp": 3.524229074889868,
+              "legal_route_progress_rate": 0.03980099502487562,
+              "mean_legal_hops_reduced": -0.014925373134328358,
+              "mean_goal_distance_reduction_m": 0.19614631687148268,
+              "positive_distance_progress_rate": 0.5682819383259912,
+              "own_hp_delta_mean": 0.003167445378899123,
+              "own_hp_scored": 227,
+              "identified_target_hp_delta_mean": -0.007601745269655712,
+              "identified_target_hp_scored": 134,
+              "current_zone_retention_rate": 0.0,
+              "current_zone_retention_scored": 0,
+              "own_survival_rate": 0.9515418502202643,
+              "own_survival_scored": 227,
+              "identified_target_alive_rate": 0.9104477611940298,
+              "identified_target_alive_scored": 134
+            },
+            "10": {
+              "scorable_recommendations": 222,
+              "target_zone_hit_rate": 0.018018018018018018,
+              "stay_put_baseline_target_zone_hit_rate": 0.0,
+              "target_zone_hit_delta_pp": 1.8018018018018018,
+              "legal_route_progress_rate": 0.020100502512562814,
+              "mean_legal_hops_reduced": -0.19597989949748743,
+              "mean_goal_distance_reduction_m": 0.1458131548116655,
+              "positive_distance_progress_rate": 0.5315315315315315,
+              "own_hp_delta_mean": 0.0586035516035516,
+              "own_hp_scored": 222,
+              "identified_target_hp_delta_mean": 0.04858802266435855,
+              "identified_target_hp_scored": 131,
+              "current_zone_retention_rate": 0.0,
+              "current_zone_retention_scored": 0,
+              "own_survival_rate": 0.8828828828828829,
+              "own_survival_scored": 222,
+              "identified_target_alive_rate": 0.9618320610687023,
+              "identified_target_alive_scored": 131
+            }
+          },
+          "paired_vs_stay_put": {
+            "3": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 5,
+                  "mean_delta": 0.06013339070567987,
+                  "ci95": [
+                    0.0012048192771084338,
+                    0.16845238095238096
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 5,
+                    "mean_delta": 0.10240963855421688,
+                    "ci95": [
+                      0.0,
+                      0.3024096385542169
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 8,
+                    "mean_delta": 0.018407091097308488,
+                    "ci95": [
+                      0.005208333333333333,
+                      0.036814182194616976
+                    ]
+                  }
+                },
+                "game_side_cells": 13
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 5,
+                  "mean_delta": 0.11149772579597142,
+                  "ci95": [
+                    0.0012345679012345679,
+                    0.32026315789473686
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 5,
+                    "mean_delta": 0.20246913580246914,
+                    "ci95": [
+                      0.0,
+                      0.6024691358024692
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 8,
+                    "mean_delta": 0.020765455304928987,
+                    "ci95": [
+                      0.00625,
+                      0.041530910609857974
+                    ]
+                  }
+                },
+                "game_side_cells": 13
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 5,
+                  "mean_delta": 0.7355873076278767,
+                  "ci95": [
+                    0.5446646921660477,
+                    0.9216403072139769
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 5,
+                    "mean_delta": 0.5922249655215598,
+                    "ci95": [
+                      0.02724204197535828,
+                      1.2223955111218974
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 8,
+                    "mean_delta": 0.5207848324133842,
+                    "ci95": [
+                      0.08521362264407595,
+                      1.0112302021224462
+                    ]
+                  }
+                },
+                "game_side_cells": 13
+              }
+            },
+            "10": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 5,
+                  "mean_delta": 0.0,
+                  "ci95": [
+                    0.0,
+                    0.0
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 5,
+                    "mean_delta": 0.0,
+                    "ci95": [
+                      0.0,
+                      0.0
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 8,
+                    "mean_delta": 0.007462686567164179,
+                    "ci95": [
+                      0.0,
+                      0.022388059701492536
+                    ]
+                  }
+                },
+                "game_side_cells": 13
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 4,
+                  "mean_delta": 0.0,
+                  "ci95": [
+                    0.0,
+                    0.0
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 4,
+                    "mean_delta": 0.0,
+                    "ci95": [
+                      0.0,
+                      0.0
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 8,
+                    "mean_delta": 0.008064516129032258,
+                    "ci95": [
+                      0.0,
+                      0.024193548387096774
+                    ]
+                  }
+                },
+                "game_side_cells": 12
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 5,
+                  "mean_delta": 0.7212924505606313,
+                  "ci95": [
+                    0.05023785840174725,
+                    1.3923470427195153
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 5,
+                    "mean_delta": 0.6454030673348683,
+                    "ci95": [
+                      -0.7855513172825841,
+                      2.1953830181793705
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 8,
+                    "mean_delta": 0.4744173435781603,
+                    "ci95": [
+                      -0.0960130707212005,
+                      1.1964604387864701
+                    ]
+                  }
+                },
+                "game_side_cells": 13
+              }
+            }
+          }
+        },
+        "英雄": {
+          "by_horizon": {
+            "3": {
+              "scorable_recommendations": 54,
+              "target_zone_hit_rate": 0.05555555555555555,
+              "stay_put_baseline_target_zone_hit_rate": 0.0,
+              "target_zone_hit_delta_pp": 5.555555555555555,
+              "legal_route_progress_rate": 0.08571428571428572,
+              "mean_legal_hops_reduced": -0.05714285714285714,
+              "mean_goal_distance_reduction_m": 0.3566359917791343,
+              "positive_distance_progress_rate": 0.6111111111111112,
+              "own_hp_delta_mean": 0.06927160493827161,
+              "own_hp_scored": 54,
+              "identified_target_hp_delta_mean": -0.023904040404040407,
+              "identified_target_hp_scored": 40,
+              "current_zone_retention_rate": 0.0,
+              "current_zone_retention_scored": 0,
+              "own_survival_rate": 0.9259259259259259,
+              "own_survival_scored": 54,
+              "identified_target_alive_rate": 0.875,
+              "identified_target_alive_scored": 40
+            },
+            "10": {
+              "scorable_recommendations": 54,
+              "target_zone_hit_rate": 0.037037037037037035,
+              "stay_put_baseline_target_zone_hit_rate": 0.0,
+              "target_zone_hit_delta_pp": 3.7037037037037033,
+              "legal_route_progress_rate": 0.05405405405405406,
+              "mean_legal_hops_reduced": -0.972972972972973,
+              "mean_goal_distance_reduction_m": -1.098728418553544,
+              "positive_distance_progress_rate": 0.3148148148148148,
+              "own_hp_delta_mean": 0.2651945379723158,
+              "own_hp_scored": 54,
+              "identified_target_hp_delta_mean": -0.011165584415584422,
+              "identified_target_hp_scored": 40,
+              "current_zone_retention_rate": 0.0,
+              "current_zone_retention_scored": 0,
+              "own_survival_rate": 0.8518518518518519,
+              "own_survival_scored": 54,
+              "identified_target_alive_rate": 0.975,
+              "identified_target_alive_scored": 40
+            }
+          },
+          "paired_vs_stay_put": {
+            "3": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 2,
+                  "mean_delta": 0.0,
+                  "ci95": [
+                    0.0,
+                    0.0
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 6,
+                    "mean_delta": 0.0701058201058201,
+                    "ci95": [
+                      0.018518518518518517,
+                      0.12566137566137567
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 4,
+                    "mean_delta": 0.0,
+                    "ci95": [
+                      0.0,
+                      0.0
+                    ]
+                  }
+                },
+                "game_side_cells": 10
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 2,
+                  "mean_delta": 0.0,
+                  "ci95": [
+                    0.0,
+                    0.0
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 6,
+                    "mean_delta": 0.09444444444444444,
+                    "ci95": [
+                      0.027777777777777776,
+                      0.16666666666666666
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 4,
+                    "mean_delta": 0.0,
+                    "ci95": [
+                      0.0,
+                      0.0
+                    ]
+                  }
+                },
+                "game_side_cells": 10
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 2,
+                  "mean_delta": 0.6664913203400513,
+                  "ci95": [
+                    0.006402944749812983,
+                    1.3265796959302896
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 6,
+                    "mean_delta": 0.3840738127983137,
+                    "ci95": [
+                      0.0198018324191222,
+                      0.7483457931775052
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 4,
+                    "mean_delta": 0.5330481666033287,
+                    "ci95": [
+                      0.01461552029316254,
+                      1.2756046180862968
+                    ]
+                  }
+                },
+                "game_side_cells": 10
+              }
+            },
+            "10": {
+              "goal_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 2,
+                  "mean_delta": 0.25,
+                  "ci95": [
+                    0.0,
+                    0.5
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 6,
+                    "mean_delta": 0.20833333333333334,
+                    "ci95": [
+                      0.0,
+                      0.5416666666666666
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 4,
+                    "mean_delta": 0.0,
+                    "ci95": [
+                      0.0,
+                      0.0
+                    ]
+                  }
+                },
+                "game_side_cells": 10
+              },
+              "progress_hits": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 2,
+                  "mean_delta": 0.25,
+                  "ci95": [
+                    0.0,
+                    0.5
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 6,
+                    "mean_delta": 0.25,
+                    "ci95": [
+                      0.0,
+                      0.5833333333333334
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 4,
+                    "mean_delta": 0.0,
+                    "ci95": [
+                      0.0,
+                      0.0
+                    ]
+                  }
+                },
+                "game_side_cells": 10
+              },
+              "distance_reduction": {
+                "red_blue_equal_game_paired_bootstrap": {
+                  "complete_games": 2,
+                  "mean_delta": -0.9896307674267517,
+                  "ci95": [
+                    -0.9927111941736151,
+                    -0.9865503406798884
+                  ]
+                },
+                "by_side": {
+                  "红": {
+                    "complete_games": 6,
+                    "mean_delta": -0.5830648701001327,
+                    "ci95": [
+                      -1.5461457501355176,
+                      0.46796294593812915
+                    ]
+                  },
+                  "蓝": {
+                    "complete_games": 4,
+                    "mean_delta": -1.325648686697252,
+                    "ci95": [
+                      -1.7836905505773848,
+                      -0.8676068228171192
+                    ]
+                  }
+                },
+                "game_side_cells": 10
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "action_matched_metrics": {
+    "cover_and_confirm_target": {
+      "by_horizon": {
+        "3": {
+          "zone_retention": {
+            "status": "scored",
+            "n": 4088,
+            "rate": 0.7208904109589042
+          },
+          "own_survival": {
+            "status": "scored",
+            "n": 4088,
+            "rate": 0.985812133072407
+          },
+          "own_hp_change": {
+            "status": "scored",
+            "n": 4088,
+            "mean_delta": -0.017676215038494883,
+            "interpretation": "observational; not attributed to this advice"
+          }
+        },
+        "10": {
+          "zone_retention": {
+            "status": "scored",
+            "n": 4033,
+            "rate": 0.581700967022068
+          },
+          "own_survival": {
+            "status": "scored",
+            "n": 4033,
+            "rate": 0.9543763947433672
+          },
+          "own_hp_change": {
+            "status": "scored",
+            "n": 4033,
+            "mean_delta": -0.04643477169165242,
+            "interpretation": "observational; not attributed to this advice"
+          }
+        }
+      },
+      "resource_completion": null,
+      "defense_effect": null,
+      "enemy_confirmation": {
+        "status": "unknown",
+        "reason": "radar future visibility/target confirmation is not in ground-truth rows"
+      }
+    },
+    "continue_attack_visible_target": {
+      "by_horizon": {
+        "3": {
+          "zone_retention": {
+            "status": "unknown",
+            "reason": "no_exact_future_zone_observation"
+          },
+          "own_survival": {
+            "status": "scored",
+            "n": 890,
+            "rate": 0.9876404494382023
+          },
+          "own_hp_change": {
+            "status": "scored",
+            "n": 890,
+            "mean_delta": -0.02504879053530739,
+            "interpretation": "observational; not attributed to this advice"
+          },
+          "identified_target_alive": {
+            "status": "scored",
+            "n": 890,
+            "rate": 0.7775280898876404,
+            "interpretation": "observational; target outcomes are confounded by all combatants"
+          },
+          "identified_target_hp_change": {
+            "status": "scored",
+            "n": 890,
+            "mean_delta": -0.06443825943095606,
+            "interpretation": "observational and confounded; not attributed to this advice"
+          }
+        },
+        "10": {
+          "zone_retention": {
+            "status": "unknown",
+            "reason": "no_exact_future_zone_observation"
+          },
+          "own_survival": {
+            "status": "scored",
+            "n": 877,
+            "rate": 0.95096921322691
+          },
+          "own_hp_change": {
+            "status": "scored",
+            "n": 877,
+            "mean_delta": -0.06850223202617729,
+            "interpretation": "observational; not attributed to this advice"
+          },
+          "identified_target_alive": {
+            "status": "scored",
+            "n": 877,
+            "rate": 0.7719498289623717,
+            "interpretation": "observational; target outcomes are confounded by all combatants"
+          },
+          "identified_target_hp_change": {
+            "status": "scored",
+            "n": 877,
+            "mean_delta": -0.09822285423938787,
+            "interpretation": "observational and confounded; not attributed to this advice"
+          }
+        }
+      },
+      "resource_completion": null,
+      "defense_effect": null,
+      "enemy_confirmation": null
+    },
+    "retreat_low_hp": {
+      "by_horizon": {
+        "3": {
+          "zone_retention": {
+            "status": "unknown",
+            "reason": "no_exact_future_zone_observation"
+          },
+          "own_survival": {
+            "status": "scored",
+            "n": 534,
+            "rate": 0.949438202247191
+          },
+          "own_hp_change": {
+            "status": "scored",
+            "n": 534,
+            "mean_delta": 0.011825935924250531,
+            "interpretation": "observational; not attributed to this advice"
+          }
+        },
+        "10": {
+          "zone_retention": {
+            "status": "unknown",
+            "reason": "no_exact_future_zone_observation"
+          },
+          "own_survival": {
+            "status": "scored",
+            "n": 525,
+            "rate": 0.8857142857142857
+          },
+          "own_hp_change": {
+            "status": "scored",
+            "n": 525,
+            "mean_delta": 0.0809342142513571,
+            "interpretation": "observational; not attributed to this advice"
+          }
+        }
+      },
+      "resource_completion": null,
+      "defense_effect": null,
+      "enemy_confirmation": null
+    }
+  },
+  "decision_scorecard_by_action": {
+    "cover_and_confirm_target": {
+      "issued_recommendations": 4088,
+      "feasibility": {
+        "route_applicable": 0,
+        "route_coverage": 0.0,
+        "legal_route_rate": null,
+        "no_zone_change_required": 4088,
+        "unknown": 0,
+        "interpretation": "functional-zone reachability only; not success probability or ETA"
+      },
+      "execution": {
+        "status": "unknown",
+        "scored": 0,
+        "unknown": 4088,
+        "coverage": 0.0,
+        "reason": "no controller command/acknowledgement logs; observed movement is not proof of execution"
+      },
+      "consequences_by_horizon": {
+        "3": {
+          "zone_retention": {
+            "scored": 4088,
+            "issued": 4088,
+            "coverage": 1.0,
+            "status": "scored"
+          },
+          "own_survival": {
+            "scored": 4088,
+            "issued": 4088,
+            "coverage": 1.0,
+            "status": "scored"
+          },
+          "own_hp_change": {
+            "scored": 4088,
+            "issued": 4088,
+            "coverage": 1.0,
+            "status": "scored"
+          }
+        },
+        "10": {
+          "zone_retention": {
+            "scored": 4033,
+            "issued": 4088,
+            "coverage": 0.9865459882583171,
+            "status": "scored"
+          },
+          "own_survival": {
+            "scored": 4033,
+            "issued": 4088,
+            "coverage": 0.9865459882583171,
+            "status": "scored"
+          },
+          "own_hp_change": {
+            "scored": 4033,
+            "issued": 4088,
+            "coverage": 0.9865459882583171,
+            "status": "scored"
+          }
+        }
+      },
+      "causal_benefit": {
+        "status": "not_identifiable",
+        "scored": 0,
+        "coverage": 0.0,
+        "reason": "replay does not intervene on controls or identify the counterfactual outcome"
+      }
+    },
+    "continue_attack_visible_target": {
+      "issued_recommendations": 890,
+      "feasibility": {
+        "route_applicable": 0,
+        "route_coverage": 0.0,
+        "legal_route_rate": null,
+        "no_zone_change_required": 890,
+        "unknown": 0,
+        "interpretation": "functional-zone reachability only; not success probability or ETA"
+      },
+      "execution": {
+        "status": "unknown",
+        "scored": 0,
+        "unknown": 890,
+        "coverage": 0.0,
+        "reason": "no controller command/acknowledgement logs; observed movement is not proof of execution"
+      },
+      "consequences_by_horizon": {
+        "3": {
+          "zone_retention": {
+            "status": "unknown",
+            "reason": "no_exact_future_zone_observation",
+            "scored": 0,
+            "issued": 890,
+            "coverage": 0.0
+          },
+          "own_survival": {
+            "scored": 890,
+            "issued": 890,
+            "coverage": 1.0,
+            "status": "scored"
+          },
+          "own_hp_change": {
+            "scored": 890,
+            "issued": 890,
+            "coverage": 1.0,
+            "status": "scored"
+          },
+          "identified_target_alive": {
+            "scored": 890,
+            "issued": 890,
+            "coverage": 1.0,
+            "status": "scored"
+          },
+          "identified_target_hp_change": {
+            "scored": 890,
+            "issued": 890,
+            "coverage": 1.0,
+            "status": "scored"
+          }
+        },
+        "10": {
+          "zone_retention": {
+            "status": "unknown",
+            "reason": "no_exact_future_zone_observation",
+            "scored": 0,
+            "issued": 890,
+            "coverage": 0.0
+          },
+          "own_survival": {
+            "scored": 877,
+            "issued": 890,
+            "coverage": 0.9853932584269663,
+            "status": "scored"
+          },
+          "own_hp_change": {
+            "scored": 877,
+            "issued": 890,
+            "coverage": 0.9853932584269663,
+            "status": "scored"
+          },
+          "identified_target_alive": {
+            "scored": 877,
+            "issued": 890,
+            "coverage": 0.9853932584269663,
+            "status": "scored"
+          },
+          "identified_target_hp_change": {
+            "scored": 877,
+            "issued": 890,
+            "coverage": 0.9853932584269663,
+            "status": "scored"
+          }
+        }
+      },
+      "causal_benefit": {
+        "status": "not_identifiable",
+        "scored": 0,
+        "coverage": 0.0,
+        "reason": "replay does not intervene on controls or identify the counterfactual outcome"
+      }
+    },
+    "retreat_low_hp": {
+      "issued_recommendations": 534,
+      "feasibility": {
+        "route_applicable": 534,
+        "route_coverage": 1.0,
+        "legal_route_rate": 1.0,
+        "no_zone_change_required": 0,
+        "unknown": 0,
+        "interpretation": "functional-zone reachability only; not success probability or ETA"
+      },
+      "execution": {
+        "status": "unknown",
+        "scored": 0,
+        "unknown": 534,
+        "coverage": 0.0,
+        "reason": "no controller command/acknowledgement logs; observed movement is not proof of execution"
+      },
+      "consequences_by_horizon": {
+        "3": {
+          "zone_retention": {
+            "status": "unknown",
+            "reason": "no_exact_future_zone_observation",
+            "scored": 0,
+            "issued": 534,
+            "coverage": 0.0
+          },
+          "own_survival": {
+            "scored": 534,
+            "issued": 534,
+            "coverage": 1.0,
+            "status": "scored"
+          },
+          "own_hp_change": {
+            "scored": 534,
+            "issued": 534,
+            "coverage": 1.0,
+            "status": "scored"
+          }
+        },
+        "10": {
+          "zone_retention": {
+            "status": "unknown",
+            "reason": "no_exact_future_zone_observation",
+            "scored": 0,
+            "issued": 534,
+            "coverage": 0.0
+          },
+          "own_survival": {
+            "scored": 525,
+            "issued": 534,
+            "coverage": 0.9831460674157303,
+            "status": "scored"
+          },
+          "own_hp_change": {
+            "scored": 525,
+            "issued": 534,
+            "coverage": 0.9831460674157303,
+            "status": "scored"
+          }
+        }
+      },
+      "causal_benefit": {
+        "status": "not_identifiable",
+        "scored": 0,
+        "coverage": 0.0,
+        "reason": "replay does not intervene on controls or identify the counterfactual outcome"
+      }
+    }
+  },
+  "metric_availability": {
+    "attack_target_hp_and_survival": "scored where exact target ID and HP rows exist; confounded by all combatants",
+    "possible_attack_target_confirmation": {
+      "status": "unknown",
+      "reason": "radar future visibility/target confirmation is absent"
+    },
+    "defense_facility_protection": {
+      "status": "unknown",
+      "reason": "no explicit defense order and no per-facility damage attribution in this telemetry"
+    },
+    "resource_arrival_or_exchange": {
+      "status": "unknown",
+      "reason": "competition timeseries does not contain per-robot carried-resource/exchange fields"
+    },
+    "retreat_survival_and_hp_change": "scored descriptively from exact future HP; no causal attribution",
+    "controller_execution": {
+      "status": "unknown",
+      "reason": "no controller command/acknowledgement log"
+    }
+  },
+  "matched_hp_comparison": {
+    "3": {
+      "matched_game_side_type_hpband_strata": 147,
+      "action_minus_no_action_observed_hp_delta": {
+        "red_blue_equal_game_paired_bootstrap": {
+          "complete_games": 8,
+          "mean_delta": -0.09960786372940353,
+          "ci95": [
+            -0.11672470147685855,
+            -0.08309208083339988
+          ]
+        },
+        "by_side": {
+          "红": {
+            "complete_games": 8,
+            "mean_delta": -0.1037149367031962,
+            "ci95": [
+              -0.13916770073832122,
+              -0.06645032123842272
+            ]
+          },
+          "蓝": {
+            "complete_games": 8,
+            "mean_delta": -0.09550079075561085,
+            "ci95": [
+              -0.13998661028885417,
+              -0.05576078956410699
+            ]
+          }
+        }
+      },
+      "interpretation": "matched observational HP-change comparison; no-action does not mean controller hold and this is not a causal effect"
+    },
+    "10": {
+      "matched_game_side_type_hpband_strata": 147,
+      "action_minus_no_action_observed_hp_delta": {
+        "red_blue_equal_game_paired_bootstrap": {
+          "complete_games": 8,
+          "mean_delta": -0.21206267410148283,
+          "ci95": [
+            -0.24170420716525765,
+            -0.17977555092657233
+          ]
+        },
+        "by_side": {
+          "红": {
+            "complete_games": 8,
+            "mean_delta": -0.2154332657993587,
+            "ci95": [
+              -0.26734792216247394,
+              -0.1459518580383933
+            ]
+          },
+          "蓝": {
+            "complete_games": 8,
+            "mean_delta": -0.20869208240360698,
+            "ci95": [
+              -0.2923941099623072,
+              -0.128179187046616
+            ]
+          }
+        }
+      },
+      "interpretation": "matched observational HP-change comparison; no-action does not mean controller hold and this is not a causal effect"
+    }
+  },
+  "limitations": [
+    "Fixed first-eight-game exploratory sample; not a fresh blind test.",
+    "Goal-hit and route progress are observed-behavior compatibility proxies, not execution or causal effectiveness.",
+    "HP and target changes are affected by all units and game events.",
+    "Target HP is scored only where the currently visible target ID is present in exact truth rows."
+  ]
+}

@@ -1,0 +1,244 @@
+{
+  "schema": "rmuc2026.passability.v1",
+  "source": {
+    "rulebook_local": "docs/field_map/RMUC_2026_rulebook_V1.3.0.pdf",
+    "rulebook_pages": [
+      35,
+      36,
+      54,
+      56,
+      62,
+      64,
+      144
+    ],
+    "official_cad_reference": "https://hz-rm-bbs-web-prod.oss-cn-hangzhou.aliyuncs.com/bbs-prod/f637e13eadfc4602a76c7a05c54f71271782803452461/RMUC2026_V2.0.0.stp",
+    "source_note": "官方 STEP 模型是参考模型，规则手册与现场搭建优先。当前文件是规划级掩码，不是 CAD 级碰撞网格。",
+    "user_reference_image": "docs/field_map/full_plan_reference.jpg",
+    "comparison_artifact": "docs/field_map/plan_comparison.png"
+  },
+  "coordinate_frame": {
+    "width_m": 28.0,
+    "height_m": 15.0,
+    "origin": "场地左下角（红方侧为 x=0，蓝方侧为 x=28）",
+    "x_axis": "由红方侧指向蓝方侧",
+    "y_axis": "由场地下边界指向上边界",
+    "rotation": "不对坐标做比赛中的 1-2 度整体倾斜补偿；规划层使用水平坐标，控制层再处理坡度和姿态",
+    "project_alignment": "与 rl/physics.py 的 28m x 15m 约定一致；不要使用逐场 replay 的 field_bounds 重新缩放"
+  },
+  "passability_classes": {
+    "free_ground": {
+      "label": "平面可通行",
+      "meaning": "在场地地面上可作为地面机器人路径候选",
+      "default_ground": true,
+      "default_air": true,
+      "confidence": "medium"
+    },
+    "road": {
+      "label": "公路/公路隧道可通行",
+      "meaning": "规则定义的公路区，包含公路、飞坡、隧道、起伏路段；可用于地面机器人路线",
+      "default_ground": true,
+      "default_air": true,
+      "confidence": "high"
+    },
+    "highland": {
+      "label": "高地条件通行",
+      "meaning": "梯形高地和中央高地是抬升结构；只有底盘离地间隙、爬坡能力、车体包络满足时才可走",
+      "default_ground": "conditional",
+      "default_air": true,
+      "confidence": "high"
+    },
+    "fly_slope": {
+      "label": "飞坡条件通行",
+      "meaning": "17 度飞坡/跳跃段，按具备跳跃能力和落地稳定性的地面机器人处理；普通机器人规划为高风险或不可用",
+      "default_ground": "conditional",
+      "default_air": true,
+      "confidence": "high"
+    },
+    "flight_area": {
+      "label": "空中机器人通行",
+      "meaning": "仅空中机器人飞行空间；必须满足安全绳、场边距离和赛规飞行限制",
+      "default_ground": false,
+      "default_air": "conditional",
+      "confidence": "high"
+    },
+    "restricted_module": {
+      "label": "设施占用/交互区",
+      "meaning": "基地、前哨站、堡垒、雷达站、资源站、补给区、装配区、停机坪、飞镖发射站等，不能当作普通自由地面；交互前要检查所属方、机器人类型和比赛时段",
+      "default_ground": false,
+      "default_air": "conditional",
+      "confidence": "high"
+    },
+    "outside_or_wall": {
+      "label": "场外/围挡/结构实体",
+      "meaning": "场地边界外、围挡和结构实体，禁止作为路径",
+      "default_ground": false,
+      "default_air": false,
+      "confidence": "high"
+    },
+    "unknown": {
+      "label": "待 CAD/现场确认",
+      "meaning": "图中边缘、可移动道具或现场偏差导致无法从规则示意图确认",
+      "default_ground": false,
+      "default_air": false,
+      "confidence": "low"
+    }
+  },
+  "module_access_policy": {
+    "base": {
+      "class": "restricted_module",
+      "ground": "forbidden_to_generic_planner",
+      "interaction": "按所属方和规则检查"
+    },
+    "outpost": {
+      "class": "restricted_module",
+      "ground": "forbidden_to_generic_planner",
+      "interaction": "按所属方和规则检查"
+    },
+    "fortress": {
+      "class": "restricted_module",
+      "ground": "avoid_footprint",
+      "interaction": "可作为战术目标，不作为自由通道"
+    },
+    "radar_base": {
+      "class": "restricted_module",
+      "ground": "avoid_footprint",
+      "interaction": "雷达相关交互单独建模"
+    },
+    "resource_station": {
+      "class": "restricted_module",
+      "ground": "avoid_footprint",
+      "interaction": "资源交互单独建模"
+    },
+    "supply_area": {
+      "class": "restricted_module",
+      "ground": "avoid_footprint",
+      "interaction": "补给行为单独建模"
+    },
+    "assembly_area": {
+      "class": "restricted_module",
+      "ground": "avoid_footprint",
+      "interaction": "装配/出生相关行为单独建模"
+    },
+    "landing_pad": {
+      "class": "restricted_module",
+      "ground": "conditional",
+      "interaction": "起降时检查占用和安全距离"
+    },
+    "energy_mechanism": {
+      "class": "restricted_module",
+      "ground": "avoid_footprint",
+      "interaction": "机构交互单独建模"
+    },
+    "charging_area": {
+      "class": "restricted_module",
+      "ground": "avoid_footprint",
+      "interaction": "充电行为单独建模"
+    },
+    "pilot_room": {
+      "class": "restricted_module",
+      "ground": "forbidden",
+      "interaction": "场外人员区域"
+    }
+  },
+  "robot_policy": {
+    "hero": {
+      "allowed": [
+        "free_ground",
+        "road"
+      ],
+      "conditional": [
+        "highland",
+        "fly_slope"
+      ],
+      "forbidden": [
+        "restricted_module",
+        "outside_or_wall",
+        "unknown"
+      ]
+    },
+    "infantry": {
+      "allowed": [
+        "free_ground",
+        "road"
+      ],
+      "conditional": [
+        "highland",
+        "fly_slope"
+      ],
+      "forbidden": [
+        "restricted_module",
+        "outside_or_wall",
+        "unknown"
+      ]
+    },
+    "engineer": {
+      "allowed": [
+        "free_ground",
+        "road"
+      ],
+      "conditional": [
+        "highland",
+        "fly_slope"
+      ],
+      "forbidden": [
+        "restricted_module",
+        "outside_or_wall",
+        "unknown"
+      ]
+    },
+    "sentinel": {
+      "allowed": [
+        "free_ground",
+        "road"
+      ],
+      "conditional": [
+        "highland"
+      ],
+      "forbidden": [
+        "fly_slope",
+        "restricted_module",
+        "outside_or_wall",
+        "unknown"
+      ]
+    },
+    "air": {
+      "allowed": [],
+      "conditional": [
+        "flight_area"
+      ],
+      "forbidden": [
+        "outside_or_wall",
+        "unknown"
+      ]
+    }
+  },
+  "planning_rules": [
+    "先用 free_ground/road 生成候选路径，再按 robot_policy 过滤 highland/fly_slope",
+    "路径缓冲半径至少为机器人外接圆半径 + 0.10m；靠近围挡、坡边和结构交界处再增加安全裕度",
+    "unknown 一律按不可通行处理，直到导入 CAD 或现场标定",
+    "物理可通行不等于战术可进入：基地、前哨站、补给、装配、停机坪和交互机构另受比赛规则、所属方、占用状态约束",
+    "sentinel/engineer 的己方深区、己方场、己半场限制属于项目战术先验，不要误写成物理障碍"
+  ],
+  "known_limits": [
+    "当前 replay 中部分建筑坐标是 (0,0) 占位，不能从比赛数据反推精确障碍多边形",
+    "规则图给出模块定位和尺寸，但示意图边缘、现场误差和可移动道具仍需 CAD/现场标定",
+    "场地整体沿长边有约 1-2 度倾斜，图上的平面坐标不能替代姿态/坡度控制"
+  ],
+  "validation_against_user_plan": {
+    "status": "结构级一致，几何级需细化",
+    "confirmed": [
+      "红方左/蓝方右坐标方向",
+      "28m x 15m 长宽比例",
+      "左右基地与前哨站的对称位置",
+      "中央高地及其两侧/上下连接通道",
+      "红蓝装配区与外围模块的相对布局"
+    ],
+    "needs_refinement": [
+      "当前图中的公路色带是候选走廊，不是精确道路边界",
+      "中央高地应使用实际折线边界和隧道口多边形",
+      "基地、前哨站、堡垒、雷达站及可移动结构要按占用 footprint 膨胀",
+      "梯形高地和飞坡的精确外接尺寸需从 CAD 或现场测量读取"
+    ],
+    "interpretation_note": "照片中的深浅纹理不直接等于可通行/不可通行；以结构边界、模块类型、机器人包络和实时占用状态联合判断。"
+  }
+}

@@ -102,7 +102,7 @@ def relabel_decisions_rollout(ws_list, dps, bounds, fused_decisions, win_model,
                 units[cls] = {'target': '无', 'move': '无', 'fire': False, 'risk': '低'}
             else:
                 units[cls] = gm.derive_unit_intent(unit, w, lbl)
-        grid.append({'global_mode': lbl, 'units': units})
+        grid.append({'t': dps[i]['t'], 'global_mode': lbl, 'units': units})
     decisions = grid
     labels = [d['global_mode'] for d in grid]
     scores = [{m: round(v, 4) for m, v in gm_scores.items()} for gm_scores in

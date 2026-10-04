@@ -5,12 +5,20 @@ import json
 from schema import layered as sl
 from worldstate import worldstate as ws
 
-SYSTEM = ("你是一台比赛策略决策哨兵。根据双方当前世界状态, 输出一组分层宏观决策"
-          "(global_mode + 英雄/工程/步兵3/步兵4/空中/哨兵 六类单位的 target/move/fire/risk)。")
+SYSTEM = ("你是一台比赛策略决策哨兵。根据双方当前可见世界状态和预测参考信息，输出一组分层宏观决策"
+          "(global_mode + 英雄/工程/步兵3/步兵4/空中/哨兵 六类单位的 target/move/fire/risk)。"
+          "输入中若提供全局分析，按现状描述（分敌我并突出特殊事件/位置/状态）、预测解析、整体建议三部分理解；"
+          "逐单位区分敌方状态与未来预测、我方状态与建议动作及理由。预测仅供参考，不能覆盖当前事实。"
+          "global_mode仍按合法三类输出，细分战术方向通过单位target/move/fire/risk表达；"
+          "risk是封闭枚举，只能输出高、中、低；target=无且move=无时risk必须为低，禁止输出risk=无；"
+          "短期只选当前或可达路线上的目标，中长期只参考区域和总体方向。未知字段保持未知，不要频繁切换。"
+          "预测参考会标出模型原始判断、持久性基线和最终融合结果：当前可见事实优先，"
+          "低置信度预测只能作为风险提示；建议动作必须引用可见单位、区域、速度、血量或明确预测字段，"
+          "不能补写输入中没有的目标和状态。")
 
 
 def situation_digest(w, opponent_intent=None, semantic_situation=None,
-                     global_analysis=None):
+                     global_analysis=None, forecast_context=None):
     """把 worldstate 压成紧凑中文局势摘要(供 instruction)。
     可选注入敌方意图概率行与语义态势行（Tier1 快路径产出）。"""
     lines = [f"t={w['t']:.0f}"]
@@ -55,6 +63,44 @@ def situation_digest(w, opponent_intent=None, semantic_situation=None,
         horizons = global_analysis.get('horizon_views') or {}
         if horizons:
             lines.append('时间尺度: 10s高细节；30-60s中等粒度；120s只判断总体攻防方向')
+        narrative = global_analysis.get('narrative') or {}
+        if narrative.get('description'):
+            lines.append('自然语言态势: ' + str(narrative['description']))
+        sections = narrative.get('sections') or {}
+        current = sections.get('current_situation') or {}
+        if current:
+            lines.append('现状（己方）: ' + str(current.get('own_side') or '未知'))
+            lines.append('现状（敌方）: ' + str(current.get('opponent_side') or '未知'))
+            events = current.get('special_events') or []
+            if events:
+                lines.append('特殊事件: ' + '；'.join(str(x) for x in events[:4]))
+        forecast_analysis = sections.get('forecast_analysis') or {}
+        if forecast_analysis.get('summary'):
+            lines.append('预测解析: ' + str(forecast_analysis['summary']))
+        overall = sections.get('overall_recommendation') or {}
+        if overall.get('text'):
+            lines.append('整体建议（仅作建议）: ' + str(overall['text']))
+        unit_rows = sections.get('unit_analysis') or []
+        if unit_rows:
+            unit_lines = []
+            for unit in unit_rows[:8]:
+                if unit.get('relation') == '敌方':
+                    unit_lines.append(str(unit.get('current_state', '')) + '；未来：' +
+                                      str(unit.get('future_prediction') or '未知'))
+                else:
+                    unit_lines.append(str(unit.get('current_state', '')) + '；建议：' +
+                                      str(unit.get('recommendation') or '未知') + '；理由：' +
+                                      str(unit.get('reason') or '未知'))
+            lines.append('单兵分析（敌方预测/我方建议）: ' + ' | '.join(unit_lines))
+        if narrative.get('recommendation'):
+            lines.append('自然语言建议: ' + str(narrative['recommendation']))
+    if forecast_context:
+        from worldstate.forecast_context import format_forecast_context
+        # Give the formatter enough room to retain probability heads and
+        # model/persistence comparisons before LoRA prompt compaction.
+        forecast_text = format_forecast_context(forecast_context, max_chars=6000)
+        if forecast_text:
+            lines.append(forecast_text.strip())
     return "局势: " + " | ".join(lines)
 
 
@@ -63,7 +109,8 @@ def decision_to_json(d):
 
 
 def make_records(fused_decisions, dps, bounds, team='红', attach_intent=True,
-                 keep_sidecars_in_completion=False):
+                 keep_sidecars_in_completion=False, temporal_forecasts=None,
+                 forecast_contexts=None):
     """fused_decisions 与 dps 等长; 返回 list[{'instruction','completion'}]。
     attach_intent: 逐步推断敌方意图并写入 digest。
     keep_sidecars_in_completion: False(默认)时 completion 只保留主 schema，
@@ -74,6 +121,11 @@ def make_records(fused_decisions, dps, bounds, team='红', attach_intent=True,
     from worldstate import semantic as semmod
     from tree import global_mode as gm
     records = []
+    if temporal_forecasts is not None and forecast_contexts is not None:
+        raise ValueError('temporal_forecasts and forecast_contexts are mutually exclusive')
+    if temporal_forecasts is not None:
+        from worldstate.forecast_context import build_forecast_context
+        forecast_contexts = [build_forecast_context(item) for item in temporal_forecasts]
     tracker = oi.GameIntentTracker()
     prev_w = None
     mode_hist = []
@@ -97,10 +149,21 @@ def make_records(fused_decisions, dps, bounds, team='红', attach_intent=True,
         mode_hist.append(d.get('global_mode', '均衡'))
         if len(mode_hist) > 5:
             mode_hist = mode_hist[-5:]
+        forecast_context = None
+        if forecast_contexts is not None and len(records) < len(forecast_contexts):
+            forecast_context = forecast_contexts[len(records)]
+        if forecast_context:
+            # Keep the three-part analysis and the compact forecast reference
+            # aligned. Without this, the prompt contained forecasts only as a
+            # trailing JSON blob while its natural-language analysis claimed
+            # no temporal predictions were available.
+            analysis['forecast_context'] = forecast_context
+            from worldstate.narrative import build_global_narrative
+            analysis['narrative'] = build_global_narrative(analysis)
         records.append({
             'instruction': situation_digest(
                 w, opponent_intent=opp, semantic_situation=situ,
-                global_analysis=analysis),
+                global_analysis=analysis, forecast_context=forecast_context),
             'completion': decision_to_json(d_out),
         })
         prev_w = w

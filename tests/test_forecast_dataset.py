@@ -1,4 +1,5 @@
 from data.forecast_dataset import build_game_forecast_examples
+from data.radar_visibility_replay import build_radar_visibility_snapshots
 
 
 def row(team, robot_id, t, x, highlight=0):
@@ -34,6 +35,16 @@ def test_dataset_pairs_radar_masked_inputs_with_global_exact_future_labels():
     blue_t0 = examples['蓝'][0]
     assert blue_t0['side'] == '蓝'
     assert '红:1' in blue_t0['observable']['opponent_entities']
+
+
+def test_returning_replay_snapshots_reuses_same_visibility_contract():
+    rows = []
+    for t in range(5):
+        rows.extend([row('红', 1, t, 1+t), row('蓝', 2, t, 9-t)])
+    examples, snapshots = build_game_forecast_examples(
+        rows, 3, horizons=(1,), step=1, return_snapshots=True)
+    assert examples == build_game_forecast_examples(rows, 3, horizons=(1,), step=1)
+    assert snapshots == build_radar_visibility_snapshots(rows, game_id=3)
 
 
 def test_dataset_rejects_mixed_game_rows():

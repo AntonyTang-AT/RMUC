@@ -15,7 +15,8 @@
   2. degeneracy   —— global_mode 是否退化为单模(Plan B 判据: 攻+均<0.10 或类别唯一);
                      及 RL 源 move 是否多样(常数策略 = 退化)。
   3. fav-alignment —— RL 源单位级攻击倾向 vs 红方有利度: Δ攻击度(RL−rule)在高 fav 时更高。
-                     期望: physics RL 源 的 fav_align ≥ bandit RL 源(见 compare_rl_sources)。
+                     期望: physics RL 源 的 fav_align **严格大于** bandit(见 compare_rl_sources)。
+                     ★ 常数策略下 Δ=c−rule 中 c 被消掉 → fav_align 失明, 必须置 None。
 
 ★ 诚实上限: fav_align 是关联性/条件有利度,非因果(设计 §3);地基是 outcome_backtest.cv_auc_win_model
   (状态确实携带胜负)。仅 4 留出局,数值以方向与量级为准。
@@ -86,10 +87,14 @@ def fusion_align_gap(decisions, worldstates, team='红'):
 def rl_source_metrics(rl_decisions, rule_decisions, worldstates, team='红'):
     """RL 源自身单位级质量(判别口径)。rl/rule: list[dict] 同序、同点; worldstates: 对齐 list。
 
-    返回 {'legal_rate', 'override_rate', 'move_diversity', 'fav_align'}.
+    返回 dict:
+      legal_rate, override_rate, move_diversity,
+      mean_move_diversity, policy_constant,
+      fav_align (常数策略时为 None), fav_align_note。
       override_rate  : RL 与规则头在 (point,class) 上 move 不同的占比 —— 0 则 RL 是空转。
       move_diversity : 每单位类 RL 输出的不同 move 种类数 —— 全为 1 则常数策略(退化)。
       fav_align      : mean(Δ攻击度 | fav高) − mean(Δ攻击度 | fav低), Δ = RL−rule; fav 以中位数二分。
+                       常数策略下 Δ 的常数项被消掉 → 置 None(constant_policy_cancels)。
     """
     favs = [fav_from_worldstate(w, team) for w in worldstates]
     classes = _unit_classes()
@@ -109,8 +114,16 @@ def rl_source_metrics(rl_decisions, rule_decisions, worldstates, team='红'):
             if rm != dm:
                 override += 1
             deltas.append((_aggr(dm) - _aggr(rm), fav))
+    move_diversity = {c: len(s) for c, s in distinct.items()}
+    mean_div = (round(float(np.mean(list(move_diversity.values()))), 4)
+                if move_diversity else 0.0)
+    # 每类只有 1 种 move → 常数策略(fav_align 对常数 RL 攻击度失明)
+    policy_constant = bool(move_diversity) and all(v <= 1 for v in move_diversity.values())
     fav_align = None
-    if deltas:
+    fav_align_note = None
+    if policy_constant:
+        fav_align_note = 'constant_policy_cancels'
+    elif deltas:
         arr = np.asarray(deltas, dtype=float)
         fav, d = arr[:, 1], arr[:, 0]
         med = float(np.median(fav))
@@ -120,8 +133,11 @@ def rl_source_metrics(rl_decisions, rule_decisions, worldstates, team='红'):
     legal = legal_rate(rl_decisions)
     return {'legal_rate': round(legal, 4),
             'override_rate': round(override / total, 4) if total else 0.0,
-            'move_diversity': {c: len(s) for c, s in distinct.items()},
-            'fav_align': fav_align}
+            'move_diversity': move_diversity,
+            'mean_move_diversity': mean_div,
+            'policy_constant': policy_constant,
+            'fav_align': fav_align,
+            'fav_align_note': fav_align_note}
 
 
 def fusion_overview(fused_result, worldstates, team='红'):
@@ -139,14 +155,33 @@ def fusion_overview(fused_result, worldstates, team='红'):
 
 
 def compare_rl_sources(physics_m, bandit_m):
-    """physics vs bandit RL 源关键 delta(判别口径)。两者都有 'fav_align','legal_rate','override_rate'。
-    返回 {'fav_align_delta_phys_minus_bandit', 'phys_ge_bandit_fav_align', 'both_legal', 'both_override'}."""
+    """physics vs bandit RL 源关键 delta(判别口径)。
+
+    phys_ge_bandit_fav_align: 仅当两侧都非常数且 fav_align 均非 None 时, 用**严格 >**
+    (相等 → False, 避免常数策略下假阳性)。
+    旁路对照(不硬门): override_rate / mean_move_diversity 差。
+    """
     fa_p, fa_b = physics_m.get('fav_align'), bandit_m.get('fav_align')
-    def _bool(x):
-        return bool(x) if x is not None else None
-    return {'fav_align_delta_phys_minus_bandit':
-                (round(fa_p - fa_b, 4) if (fa_p is not None and fa_b is not None) else None),
-            'phys_ge_bandit_fav_align': _bool(fa_p >= fa_b) if (fa_p is not None and fa_b is not None) else None,
+    const_p = bool(physics_m.get('policy_constant'))
+    const_b = bool(bandit_m.get('policy_constant'))
+    both_non_constant = (not const_p) and (not const_b)
+    if both_non_constant and fa_p is not None and fa_b is not None:
+        phys_ge = bool(fa_p > fa_b)
+        delta = round(fa_p - fa_b, 4)
+    else:
+        phys_ge = None
+        delta = (round(fa_p - fa_b, 4)
+                 if (fa_p is not None and fa_b is not None) else None)
+    md_p = physics_m.get('mean_move_diversity')
+    md_b = bandit_m.get('mean_move_diversity')
+    return {'fav_align_delta_phys_minus_bandit': delta,
+            'phys_ge_bandit_fav_align': phys_ge,
+            'both_non_constant': both_non_constant,
             'both_legal': (physics_m['legal_rate'] >= 0.9 and bandit_m['legal_rate'] >= 0.9),
             'both_override': (physics_m['override_rate'] > 0.0 and bandit_m['override_rate'] > 0.0),
-            'physics_fav_align': fa_p, 'bandit_fav_align': fa_b}
+            'override_rate_delta_phys_minus_bandit':
+                round(physics_m['override_rate'] - bandit_m['override_rate'], 4),
+            'mean_move_diversity_delta_phys_minus_bandit':
+                (round(md_p - md_b, 4) if (md_p is not None and md_b is not None) else None),
+            'physics_fav_align': fa_p, 'bandit_fav_align': fa_b,
+            'physics_policy_constant': const_p, 'bandit_policy_constant': const_b}

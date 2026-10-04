@@ -1,0 +1,8 @@
+{
+  "source": "F:\\Desktop\\学校\\rm考核项目\\out_m2\\official\\zone_lines_model_white_bluebase.png",
+  "output": "F:\\Desktop\\学校\\rm考核项目\\out_m2\\official\\zone_lines_center_symmetric_clean.png",
+  "canonical_half": "upper half; lower reconstructed by 180-degree rotation",
+  "red_blue_mismatch_pixels": 0,
+  "blue_red_mismatch_pixels": 0,
+  "purple_mismatch_pixels": 0
+}

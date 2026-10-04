@@ -64,34 +64,53 @@ class IPPO:
         return trace
 
     def train(self, env, n_updates=200, device='cpu', verbose=False):
-        """参数共享 IPPO: 反复采样多 agent 轨迹 -> 合并过渡做 PPO 更新。返回统计 dict。"""
+        """参数共享 IPPO: 反复采样多 agent 轨迹 -> 合并过渡做 PPO 更新。返回统计 dict。
+
+        GAE 按 **agent 各自时间轴** 计算(不再把同一步 6 agent 展平成伪时间序列)。
+        """
         import torch
+        from collections import defaultdict
+        previous_grad_enabled = torch.is_grad_enabled()
         torch.set_grad_enabled(True)
         stats = {'updates': 0, 'mean_reward': 0.0}
         ep_rewards = []
         for _up in range(n_updates):
             trace = self._rollout_one_episode(env)
-            if trace:
-                ep_rewards.append(sum(r for _a, _o, _act, r, _no, _d, _lp in trace) / len(set(a for a, *_r in trace)))
-            # 组装批量 tensors
-            obs_t = torch.tensor(np.array([t[1] for t in trace]), dtype=torch.float32, device=device)
-            act_t = torch.tensor([t[2] for t in trace], dtype=torch.long, device=device)
-            rew_t = torch.tensor([t[3] for t in trace], dtype=torch.float32, device=device)
-            dones = [t[5] for t in trace]
-            next_t = torch.tensor(np.array([t[4] for t in trace]), dtype=torch.float32, device=device)
-            old_lp_t = torch.tensor([t[6] for t in trace], dtype=torch.float32, device=device)
-            # GAE
-            values = self._value(obs_t)
-            next_values = self._value(next_t)
-            adv, ret = self._gae(values, next_values, rew_t, torch.tensor(dones, dtype=torch.float32, device=device))
+            if not trace:
+                continue
+            n_ag = len({a for a, *_r in trace})
+            ep_rewards.append(sum(r for _a, _o, _act, r, _no, _d, _lp in trace) / max(1, n_ag))
+            # 按 agent 分组保时序, 各自 GAE 后再拼 batch
+            by_ag = defaultdict(list)
+            for item in trace:
+                by_ag[item[0]].append(item)
+            obs_parts, act_parts, ret_parts, adv_parts, old_parts = [], [], [], [], []
+            for ag in sorted(by_ag.keys()):
+                items = by_ag[ag]
+                obs_t = torch.tensor(np.array([t[1] for t in items]), dtype=torch.float32, device=device)
+                act_t = torch.tensor([t[2] for t in items], dtype=torch.long, device=device)
+                rew_t = torch.tensor([t[3] for t in items], dtype=torch.float32, device=device)
+                dones = torch.tensor([t[5] for t in items], dtype=torch.float32, device=device)
+                next_t = torch.tensor(np.array([t[4] for t in items]), dtype=torch.float32, device=device)
+                old_lp_t = torch.tensor([t[6] for t in items], dtype=torch.float32, device=device)
+                values = self._value(obs_t)
+                next_values = self._value(next_t)
+                adv, ret = self._gae(values, next_values, rew_t, dones)
+                obs_parts.append(obs_t); act_parts.append(act_t)
+                ret_parts.append(ret); adv_parts.append(adv); old_parts.append(old_lp_t)
+            obs_t = torch.cat(obs_parts, 0)
+            act_t = torch.cat(act_parts, 0)
+            ret = torch.cat(ret_parts, 0)
+            adv = torch.cat(adv_parts, 0)
+            old_lp_t = torch.cat(old_parts, 0)
             for _e in range(self.epochs):
-                idx = torch.randperm(len(trace), device=device)
+                idx = torch.randperm(obs_t.shape[0], device=device)
                 for s in range(0, len(idx), self.batch):
                     b = idx[s:s + self.batch]
                     self._ppo_step(obs_t[b], act_t[b], ret[b], adv[b], old_lp_t[b])
             stats['updates'] += 1
             stats['mean_reward'] = float(np.mean(ep_rewards[-10:])) if ep_rewards else 0.0
-        torch.set_grad_enabled(False)
+        torch.set_grad_enabled(previous_grad_enabled)
         return stats
 
     def _value(self, x):
@@ -142,6 +161,7 @@ class IPPO:
         if env is None:
             env = M2Env(dps, bounds)
         out = []
+        previous_grad_enabled = self._torch.is_grad_enabled()
         self._torch.set_grad_enabled(False)
         for _t in range(len(dps)):
             obs_d = env.obs_dict()
@@ -154,7 +174,7 @@ class IPPO:
             out.append({ag: ACTION_MEANINGS[act_map[ag]] for ag in obs_d})
             # 真 step: M2Env->下一真实决策点(行为与旧 t+=1 等价), PhysicsEnv->模拟推进(闭环)
             env.step(act_map)
-        self._torch.set_grad_enabled(True)
+        self._torch.set_grad_enabled(previous_grad_enabled)
         return out
 
     def save(self, path):

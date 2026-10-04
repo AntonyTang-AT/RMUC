@@ -1,0 +1,11 @@
+{
+  "source": "F:\\Desktop\\学校\\rm考核项目\\out_m2\\official\\zone_lines_model_white_bluebase.png",
+  "output": "F:\\Desktop\\学校\\rm考核项目\\out_m2\\official\\zone_lines_center_symmetric.png",
+  "symmetry": "180-degree center rotation",
+  "red_blue_mismatch_pixels": 0,
+  "blue_red_mismatch_pixels": 0,
+  "purple_mismatch_pixels": 0,
+  "red_pixels": 103838,
+  "blue_pixels": 103838,
+  "purple_pixels": 72142
+}

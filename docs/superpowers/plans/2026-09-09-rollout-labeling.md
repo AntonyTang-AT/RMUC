@@ -228,19 +228,30 @@ def _dp():
 BOUNDS = {'xmin': 0.0, 'xmax': 100.0, 'ymin': 0.0, 'ymax': 100.0}
 
 
-def test_enemy_best_response_is_transpose_argmax():
-    from game import game_theory as gt
-    import numpy as np
-    for m in sl.GLOBAL_MODES:
-        got = rl.enemy_best_response(m)
-        assert got in sl.GLOBAL_MODES
-        # 手算: 敌方行(mode) 对 我方列(one-hot m) 的 argmax
-        i = sl.GLOBAL_MODES.index(m)
-        onehot = [1.0 if k == i else 0.0 for k in range(3)]
-        M = np.array(gt.PAYOFF_3).T
-        exp = [sum(M[r][j] * onehot[j] for j in range(3)) for r in range(3)]
-        expect = sl.GLOBAL_MODES[max(range(3), key=lambda r: exp[r])]
-        assert got == expect
+def test_enemy_best_response_adversarial():
+    # R-E7: 对抗 argmin(敌最小化我方 payoff) — 硬编码期望, 非自引用.
+    # PAYOFF_3=[[-0.5,0.3,0.8],[0,0,0.2],[-0.3,-0.5,0.5]]
+    assert rl.enemy_best_response('进攻') == '进攻'  # i=0: min(-0.5,0.3,0.8)=-0.5@j=0
+    assert rl.enemy_best_response('均衡') == '进攻'  # i=1: min(0,0,0.2)=0@j=0
+    assert rl.enemy_best_response('防守') == '均衡'  # i=2: min(-0.3,-0.5,0.5)=-0.5@j=1
+
+
+def test_step_robots_enemy_fire_flag():
+    # R-E6: enemy_fire=False 关返回敌火(防双算)。红方 action-fire 打蓝方掉血;返回敌火被抑制 -> 红方零伤。
+    from rl import physics as ph
+    def mk():
+        return {'r1': {'type': '哨兵', 'team': '红', 'x': 40.0, 'y': 50.0, 'hp': 300.0, 'maxhp': 400.0,
+                       'power': 0.0, 'small_heat': 0.0, 'big_heat': 0.0, 'vuln': 0.0,
+                       'ammo17': 0.0, 'ammo42': 0.0, 'dfire': 0.0, 'yaw': 0.0, 'alive': 1},
+                'b1': {'type': '步兵3', 'team': '蓝', 'x': 46.0, 'y': 50.0, 'hp': 275.0, 'maxhp': 275.0,
+                       'power': 0.0, 'small_heat': 0.0, 'big_heat': 0.0, 'vuln': 0.0,
+                       'ammo17': 0.0, 'ammo42': 0.0, 'dfire': 0.0, 'yaw': 0.0, 'alive': 1}}
+    act = {'哨兵': {'move': '无', 'fire': True}}
+    off = ph.step_robots(mk(), '红', act, dt=3.0, enemy_fire=False)
+    assert off['b1']['hp'] < 275.0   # 红方 action-fire 命中蓝方(合法) -> 蓝方掉血
+    assert off['r1']['hp'] == 300.0  # 无返回敌火 -> 红方自身零伤
+    on = ph.step_robots(mk(), '红', act, dt=3.0, enemy_fire=True)
+    assert on['r1']['hp'] < 300.0    # 对照组: 蓝方返回敌火 -> 红方掉血, 证明标志可区分
 
 
 def test_commit_actions_legal_and_fire_bool():
@@ -333,13 +344,11 @@ PAYOFF_3 = gt.PAYOFF_3
 
 
 def enemy_best_response(our_mode, matrix=PAYOFF_3):
-    """敌方对我方提交纯策略 our_mode 的最优应对模式。
-    转置矩阵(敌方行, 我方列), 我方 one-hot 作敌方眼中的对手策略, best_response 取 argmax。"""
+    """敌方对我方提交纯策略 our_mode 的对抗应对模式(R-E7)。
+    我方行固定 i=our_mode, 敌方取 j 使**我方 payoff 最小**(PAYOFF_3 为我方 payoff, 敌最大化其自身即最小化我方) -> argmin。"""
     i = GLOBAL_MODES.index(our_mode)
-    onehot = [1.0 if k == i else 0.0 for k in range(3)]
-    M = np.array(matrix, float).T
-    idx = gt.best_response(M.tolist(), onehot)
-    return GLOBAL_MODES[idx]
+    row_i = matrix[i]
+    return GLOBAL_MODES[min(range(3), key=lambda j: row_i[j])]
 
 
 def worldstate_from_live(live, dp_t, bounds):
@@ -382,8 +391,8 @@ def rollout_once(dp0, bounds, my_mode, team='红', T=5, dt=None, params=None):
         w = worldstate_from_live(live, dp0, bounds)
         my_act = commit_actions(w, my_mode, my_team)
         en_act = commit_actions(w, e_m, en_team)
-        live = ph.step_robots(live, my_team, my_act, dt, params)
-        live = ph.step_robots(live, en_team, en_act, dt, params)
+        live = ph.step_robots(live, my_team, my_act, dt, params, enemy_fire=False)  # R-E6: 关返回敌火防双算
+        live = ph.step_robots(live, en_team, en_act, dt, params, enemy_fire=False)  # R-E6
         traj.append(worldstate_from_live(live, dp0, bounds))
     return traj
 
@@ -578,8 +587,9 @@ def test_outcome_consistency_shape():
     res = mrd.outcome_consistency(
         [labels[0], labels[1], labels[2], labels[3]],
         [{m: scores[m] for m in ('进攻', '均衡', '防守')} for _ in labels], '红')
-    assert '进攻' in res and '防守' in res
-    assert res['op_vs_def_gap'] == round(res['进攻'] - res['防守'], 4)
+    msb = res['mean_score_by_label']
+    assert '进攻' in msb and '防守' in msb
+    assert res['op_vs_def_gap'] == round(msb['进攻'] - msb['防守'], 4)
 
 
 def _dp():
@@ -704,8 +714,8 @@ def outcome_consistency(labels, scores, team='红'):
         res['op_vs_def_gap'] = round(means['进攻'] - means['防守'], 4)
     else:
         res['op_vs_def_gap'] = None
-    res['note'] = ('op_vs_def_gap>0: 标'进攻'的点其胜机均值更高=标签与真实胜势对齐, 合理。'
-                   '<=0: 标签机器与现实矛盾, 应停。')
+    res['note'] = ("op_vs_def_gap>0: 标'进攻'的点其胜机均值更高=标签与真实胜势对齐, 合理。 "
+                   "<=0: 标签机器与现实矛盾, 应停。")
     return res
 
 

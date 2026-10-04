@@ -1,0 +1,76 @@
+{
+  "schema_version": "decision-metric-validity-audit-v1",
+  "contract": {
+    "metric": "end_to_end_hindsight_decision_quality",
+    "sampling": "uniform decision-time sampling within each holdout game",
+    "lookahead_delta_frames": 5,
+    "stable_label_definition": "hindsight mode remains unchanged for the next five decision frames",
+    "min_mode_rows": 12,
+    "min_mode_games": 12
+  },
+  "games": [
+    1778631047459,
+    1778735937597,
+    1778766623007,
+    1778836256660,
+    1778911982278,
+    1778980152852,
+    1779330075535,
+    1779366872029,
+    1779439123147,
+    1779512593414,
+    1779543203822,
+    1779615925143,
+    1779688061372,
+    1780038166443,
+    1780108586349,
+    1780145490811,
+    1780214734129,
+    1780282239854,
+    1780323038454,
+    1780391866389
+  ],
+  "points_per_game": 12,
+  "by_side": {
+    "红": {
+      "issue_rows": 240,
+      "mode_rows": {
+        "进攻": 110,
+        "防守": 104,
+        "均衡": 26
+      },
+      "mode_complete_games": {
+        "进攻": 19,
+        "防守": 16,
+        "均衡": 14
+      },
+      "label_stability_next_5": {
+        "eligible_rows": 220,
+        "stable_rows": 170,
+        "coverage": 0.7727272727272727
+      },
+      "mode_row_coverage_pass": true,
+      "mode_game_coverage_pass": true
+    },
+    "蓝": {
+      "issue_rows": 240,
+      "mode_rows": {
+        "进攻": 104,
+        "防守": 110,
+        "均衡": 26
+      },
+      "mode_complete_games": {
+        "进攻": 16,
+        "防守": 19,
+        "均衡": 14
+      },
+      "label_stability_next_5": {
+        "eligible_rows": 220,
+        "stable_rows": 169,
+        "coverage": 0.7681818181818182
+      },
+      "mode_row_coverage_pass": true,
+      "mode_game_coverage_pass": true
+    }
+  }
+}

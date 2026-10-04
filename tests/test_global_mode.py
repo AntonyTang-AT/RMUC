@@ -43,10 +43,45 @@ def test_base_threat_overrides_attack_push():
     # 红深入压蓝(进攻条件满足)且红基地低血 -> 防守必须压倒进攻
     assert gm.derive_global_mode(_ws([0.8, 0.7, 0.6], [0.7, 0.65, 0.6], [1, 1, 1], [0.1, 0.1, 0.1], 0.4)) == '防守'
 
-def test_derive_sentry_state_maps_mode():
-    import tree.global_mode as gm
-    red = {'robots': {'r': {'type': '步兵3', 'team': '红', 'norm_xy': [0.6, 0.5],
-                            'hp_ratio': 1.0, 'vuln': 0, 'dfire': 0}},
-           'buildings': {'b': {'team': '红', 'hp_ratio': 0.4}}}
-    assert gm.derive_sentry_state(red) == 'def'
+def test_derive_sentry_state_three_way():
+    """瞬时几何：def / hitbuilding / cruise 三态齐全（对齐考核原图）。"""
+    # def: 蓝方单位进入红半场 (nx<0.5)
+    w_def = {
+        'robots': {
+            's': {'type': '哨兵', 'team': '红', 'norm_xy': [0.3, 0.5], 'hp_ratio': 1.0,
+                  'vuln': 0, 'dfire': 0},
+            'e': {'type': '步兵3', 'team': '蓝', 'norm_xy': [0.3, 0.5], 'hp_ratio': 1.0,
+                  'vuln': 0, 'dfire': 0},
+        },
+        'buildings': {},
+    }
+    assert gm.derive_sentry_state(w_def) == 'def'
+    assert gm.sentry_to_strategic('def') == 'StrategicDefendBase'
+
+    # hitbuilding: 无敌压境，红哨兵越线+开火
+    w_hit = {
+        'robots': {
+            's': {'type': '哨兵', 'team': '红', 'norm_xy': [0.7, 0.5], 'hp_ratio': 1.0,
+                  'vuln': 0, 'dfire': 2.0},
+            'e': {'type': '步兵3', 'team': '蓝', 'norm_xy': [0.8, 0.5], 'hp_ratio': 1.0,
+                  'vuln': 0, 'dfire': 0},
+        },
+        'buildings': {},
+    }
+    assert gm.derive_sentry_state(w_hit) == 'hitbuilding'
+    assert gm.sentry_to_strategic('hitbuilding') == 'StrategicAttackOutpost'
+
+    # cruise: 中线对峙、未开火
+    w_cruise = {
+        'robots': {
+            's': {'type': '哨兵', 'team': '红', 'norm_xy': [0.4, 0.5], 'hp_ratio': 1.0,
+                  'vuln': 0, 'dfire': 0},
+            'e': {'type': '步兵3', 'team': '蓝', 'norm_xy': [0.6, 0.5], 'hp_ratio': 1.0,
+                  'vuln': 0, 'dfire': 0},
+        },
+        'buildings': {},
+    }
+    assert gm.derive_sentry_state(w_cruise) == 'cruise'
+    assert gm.sentry_to_strategic('cruise') == 'StrategicPatrol'
     assert gm.derive_sentry_state({'robots': {}, 'buildings': {}}) == 'cruise'
+    assert gm.strategic_to_sentry('StrategicDefendBase') == 'def'

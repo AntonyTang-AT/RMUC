@@ -179,4 +179,5 @@ def strip_sidecar_for_validate(decision):
     d.pop('semantic_situation', None)
     d.pop('global_analysis', None)
     d.pop('temporal_forecast', None)
+    d.pop('_tier2_generation', None)
     return d
